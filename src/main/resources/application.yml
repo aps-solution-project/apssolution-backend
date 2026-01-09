@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: apssolution-backend
+
+  datasource:
+    url: jdbc:mysql://database-2.clwoya2662ja.ap-northeast-2.rds.amazonaws.com:3306/apssolution
+    username: admin
+    password: ${password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: true
+
+  jackson:
+    default-property-inclusion: NON_NULL
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: JHwebDevelopmentCom@gmail.com
+    password: ${emailPw}
+    properties:
+      mail:
+        smtp:
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 500MB
+
+
+server:
+  tomcat:
+    max-part-count: -1
