@@ -1,0 +1,28 @@
+package org.example.apssolution.domain.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import lombok.*;
+import jakarta.persistence.Id;
+
+@Getter
+@Setter
+@Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Task {
+    @Id
+    private String id;
+
+    @ManyToOne
+    private Product product;
+
+    @ManyToOne
+    private ToolCategory toolCategory;
+
+    private Integer seq;
+    private String name;
+    private String description;
+    private Integer duration;
+}
