@@ -27,5 +27,8 @@ public class Scenario {
     @PrePersist
     public void prePersist() {
         this.id = UUID.randomUUID().toString().split("-")[0].toUpperCase();
+        this.status = "READY";
+        this.makespan = 0;
+        this.published = false;
     }
 }

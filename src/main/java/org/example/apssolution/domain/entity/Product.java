@@ -2,6 +2,7 @@ package org.example.apssolution.domain.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import lombok.*;
 
 @Getter
@@ -16,4 +17,9 @@ public class Product {
     private String name;
     private String description;
     private Boolean active;
+
+    @PrePersist
+    public void prePersist() {
+        this.active = true;
+    }
 }
