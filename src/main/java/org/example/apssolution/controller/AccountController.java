@@ -2,12 +2,10 @@ package org.example.apssolution.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Account;
-import org.example.apssolution.dto.request.CreateAccountRequest;
+import org.example.apssolution.dto.request.account.CreateAccountRequest;
 import org.example.apssolution.repository.AccountRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @CrossOrigin
 @RestController

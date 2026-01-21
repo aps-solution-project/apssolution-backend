@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.ToolCategory;
 import org.example.apssolution.domain.enums.Role;
-import org.example.apssolution.dto.request.CreateCategoryRequest;
-import org.example.apssolution.dto.request.CreateToolRequest;
+import org.example.apssolution.dto.request.tool.CreateCategoryRequest;
+import org.example.apssolution.dto.request.tool.CreateToolRequest;
 import org.example.apssolution.dto.response.tool.CreateCategoryResponse;
 import org.example.apssolution.repository.AccountRepository;
 import org.example.apssolution.repository.ToolCategoryRepository;
@@ -15,11 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor

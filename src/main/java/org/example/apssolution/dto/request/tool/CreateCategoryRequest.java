@@ -1,4 +1,4 @@
-package org.example.apssolution.dto.request;
+package org.example.apssolution.dto.request.tool;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
