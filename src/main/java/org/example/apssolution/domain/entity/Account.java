@@ -1,9 +1,8 @@
 package org.example.apssolution.domain.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.*;
 import lombok.*;
+import org.example.apssolution.domain.enums.Role;
 
 import java.time.LocalDate;
 
@@ -18,7 +17,9 @@ public class Account {
     private String id;
     private String pw;
     private String name;
-    private String role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
     private String email;
     private LocalDate workedAt;
     private LocalDate resignedAt;
