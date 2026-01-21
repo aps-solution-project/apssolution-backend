@@ -18,7 +18,7 @@ public class ScenarioWorker {
     private Scenario scenario;
 
     @ManyToOne
-    private Member worker;
+    private Account worker;
 
     private Boolean read;
 }

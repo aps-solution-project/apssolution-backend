@@ -22,7 +22,7 @@ public class ScenarioSchedule {
     @ManyToOne
     private Task task;
     @ManyToOne
-    private Member worker;
+    private Account worker;
     @ManyToOne
     private Tool tool;
 

@@ -3,7 +3,6 @@ package org.example.apssolution.domain.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
-import jakarta.validation.Valid;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -14,7 +13,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Member {
+public class Account {
     @Id
     private String id;
     private String pw;

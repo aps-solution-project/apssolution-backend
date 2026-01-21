@@ -17,7 +17,7 @@ public class Notice {
     private Long id;
 
     @ManyToOne
-    private Member writer;
+    private Account writer;
     @ManyToOne
     private Scenario scenario;
     private String title;
