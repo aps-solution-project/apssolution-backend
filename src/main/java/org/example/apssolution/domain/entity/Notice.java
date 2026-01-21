@@ -18,7 +18,8 @@ public class Notice {
 
     @ManyToOne
     private Member writer;
-
+    @ManyToOne
+    private Scenario scenario;
     private String title;
     private String content;
     private LocalDateTime createdAt;

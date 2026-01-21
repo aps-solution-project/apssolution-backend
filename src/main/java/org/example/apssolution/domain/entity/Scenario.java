@@ -17,6 +17,7 @@ import java.util.UUID;
 public class Scenario {
     @Id
     private String id;
+    private String title;
     private String description;
     private String status;
     private LocalDateTime startAt;
@@ -30,5 +31,8 @@ public class Scenario {
         this.status = "READY";
         this.makespan = 0;
         this.published = false;
+        if(this.title == null){
+            this.title = "";
+        }
     }
 }
