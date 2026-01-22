@@ -1,4 +1,4 @@
-package org.example.apssolution.dto.request.tool;
+package org.example.apssolution.dto.request.product;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -8,24 +8,25 @@ import lombok.Getter;
 import lombok.Setter;
 import org.example.apssolution.domain.entity.Tool;
 import org.example.apssolution.domain.entity.ToolCategory;
+import org.example.apssolution.dto.request.tool.UpsertToolRequest;
 
 import java.util.List;
 
 @Getter
 @Setter
 @Builder
-public class UpsertToolRequest {
+public class UpsertProductRequest {
     @Valid
     @NotEmpty
-    List<Item> tools;
+    List<UpsertProductRequest.Item> products;
 
     @Getter
     @Setter
     public static class Item {
         @NotBlank
-        private String toolId;
+        private String productId;
         @NotBlank
-        private String categoryId;
+        private String name;
         private String description;
     }
 }
