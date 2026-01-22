@@ -2,6 +2,7 @@ package org.example.apssolution.domain.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import lombok.*;
 import jakarta.persistence.Id;
 
@@ -25,4 +26,11 @@ public class Task {
     private String name;
     private String description;
     private Integer duration;
+
+    @PrePersist
+    public void prePersist(){
+        if (this.description == null){
+            this.description = "";
+        }
+    }
 }

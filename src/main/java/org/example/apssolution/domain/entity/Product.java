@@ -25,5 +25,8 @@ public class Product {
     public void prePersist() {
         this.active = true;
         this.createdAt = LocalDateTime.now();
+        if(this.description == null){
+            this.description = "";
+        }
     }
 }
