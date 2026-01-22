@@ -30,6 +30,13 @@
         <java.version>21</java.version>
     </properties>
     <dependencies>
+        <dependency> <!-- xlsx parse lib -->
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.5.1</version>
+            <scope>compile</scope>
+        </dependency>
+
         <dependency> <!--security BCrypt-->
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-core</artifactId>

@@ -29,4 +29,5 @@ public class Account {
         this.workedAt = LocalDate.now();
         this.resignedAt = null;
     }
+
 }
