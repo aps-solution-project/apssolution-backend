@@ -71,7 +71,7 @@ public class ToolController {
 
     @Transactional
     @PutMapping //툴 벌크 수정
-    public ResponseEntity<?> upsertTools(@RequestBody @Valid UpsertToolRequest ntr,
+    public ResponseEntity<?> upsertTools(@RequestBody @Valid UpsertToolRequest utr,
                                          BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             FieldError fe = bindingResult.getFieldError();
@@ -79,13 +79,13 @@ public class ToolController {
         }
 
         List<Tool> myTools = toolRepository.findAll();
-        List<String> targetIds = ntr.getTools()
+        List<String> targetIds = utr.getTools()
                 .stream().map(UpsertToolRequest.Item::getToolId).toList();
         List<Tool> notContainsTools = myTools.stream()
                 .filter(t -> !targetIds.contains(t.getId())).toList();
 
 
-        List<Tool> upsertTools = ntr.getTools().stream().map(item -> {
+        List<Tool> upsertTools = utr.getTools().stream().map(item -> {
             return Tool.builder()
                     .id(item.getToolId())
                     .category(toolCategoryRepository.findById(item.getCategoryId()).orElseThrow(() ->
