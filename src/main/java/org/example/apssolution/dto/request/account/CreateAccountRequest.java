@@ -26,4 +26,5 @@ public class CreateAccountRequest {
     @NotEmpty
     @Email
     private String email;
+    private String profileImageUrl;
 }
