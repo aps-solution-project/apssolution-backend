@@ -5,6 +5,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @Entity
@@ -17,9 +19,11 @@ public class Product {
     private String name;
     private String description;
     private Boolean active;
+    private LocalDateTime createdAt;
 
     @PrePersist
     public void prePersist() {
         this.active = true;
+        this.createdAt = LocalDateTime.now();
     }
 }

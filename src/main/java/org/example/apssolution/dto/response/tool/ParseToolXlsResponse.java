@@ -1,4 +1,4 @@
-package org.example.apssolution.dto.request.tool;
+package org.example.apssolution.dto.response.tool;
 
 import lombok.Getter;
 import lombok.Setter;

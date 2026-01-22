@@ -4,18 +4,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.example.apssolution.domain.entity.Product;
-import org.example.apssolution.domain.entity.Tool;
-import org.example.apssolution.domain.entity.ToolCategory;
 import org.example.apssolution.dto.request.ParseXlsRequest;
 import org.example.apssolution.dto.request.product.UpsertProductRequest;
-import org.example.apssolution.dto.request.tool.ParseToolXlsResponse;
-import org.example.apssolution.dto.request.tool.UpsertToolRequest;
 import org.example.apssolution.dto.response.product.ParseProductXlsResponse;
 import org.example.apssolution.dto.response.product.ProductListResponse;
 import org.example.apssolution.dto.response.product.ProductResponse;
 import org.example.apssolution.dto.response.product.UpsertProductResponse;
-import org.example.apssolution.dto.response.tool.UpsertToolResponse;
+import org.example.apssolution.dto.response.task.TaskListResponse;
 import org.example.apssolution.repository.ProductRepository;
+import org.example.apssolution.repository.TaskRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,11 +33,12 @@ import java.util.List;
 @RequestMapping("/api/products")
 public class ProductController {
     final ProductRepository productRepository;
+    final TaskRepository taskRepository;
 
     @Transactional
     @PutMapping // 품목 벌크 수정
-    public ResponseEntity<?> upsertTools(@RequestBody @Valid UpsertProductRequest upr,
-                                         BindingResult bindingResult) {
+    public ResponseEntity<?> upsertProducts(@RequestBody @Valid UpsertProductRequest upr,
+                                            BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             FieldError fe = bindingResult.getFieldError();
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, fe.getDefaultMessage());
@@ -49,23 +47,25 @@ public class ProductController {
         List<Product> myProducts = productRepository.findAll();
         List<String> targetIds = upr.getProducts()
                 .stream().map(UpsertProductRequest.Item::getProductId).toList();
-        List<Product> notContainsTools = myProducts.stream()
+        List<Product> notContainsProducts = myProducts.stream()
                 .filter(t -> !targetIds.contains(t.getId())).toList();
 
 
-        List<Product> upsertTools = upr.getProducts().stream().map(item -> {
+        List<Product> upsertProducts = upr.getProducts().stream().map(item -> {
             return Product.builder()
                     .id(item.getProductId())
                     .name(item.getName())
-                    .description(item.getDescription()).build();
+                    .description(item.getDescription())
+                    .active(true)
+                    .build();
         }).toList();
 
-        productRepository.deleteAll(notContainsTools);
-        productRepository.saveAll(upsertTools);
+        productRepository.deleteAll(notContainsProducts);
+        productRepository.saveAll(upsertProducts);
 
-        int delete = notContainsTools.size();
+        int delete = notContainsProducts.size();
         int update = myProducts.size() - delete;
-        int created = upsertTools.size() - update;
+        int created = upsertProducts.size() - update;
 
         return ResponseEntity.status(HttpStatus.CREATED).
                 body(UpsertProductResponse.builder()
@@ -126,5 +126,14 @@ public class ProductController {
         }
 
         return ResponseEntity.status(HttpStatus.OK).body(resp);
+    }
+
+
+    @GetMapping("/{productId}/tasks") // 품목 아이디로 하위 작업 조회
+    public ResponseEntity<?> getProductTasks(@PathVariable String productId) {
+        return ResponseEntity.status(HttpStatus.OK).body(TaskListResponse.builder().tasks(taskRepository.findAll().stream()
+                .filter(t -> productId.equals(t.getProduct().getId()))
+                .sorted((a, b) -> Integer.compare(a.getSeq(), b.getSeq()))
+                .toList()).build());
     }
 }

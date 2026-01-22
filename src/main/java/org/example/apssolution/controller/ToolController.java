@@ -8,7 +8,7 @@ import org.example.apssolution.domain.entity.ToolCategory;
 import org.example.apssolution.dto.request.tool.CreateCategoryRequest;
 import org.example.apssolution.dto.request.tool.UpsertToolRequest;
 import org.example.apssolution.dto.request.ParseXlsRequest;
-import org.example.apssolution.dto.request.tool.ParseToolXlsResponse;
+import org.example.apssolution.dto.response.tool.ParseToolXlsResponse;
 import org.example.apssolution.dto.response.tool.*;
 import org.example.apssolution.repository.ToolCategoryRepository;
 import org.example.apssolution.repository.ToolRepository;
