@@ -14,7 +14,7 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class CreateToolRequest {
+public class UpsertToolRequest {
     @Valid
     @NotEmpty
     List<Item> tools;

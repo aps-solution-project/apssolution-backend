@@ -3,17 +3,13 @@ package org.example.apssolution.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
-import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Tool;
 import org.example.apssolution.domain.entity.ToolCategory;
-import org.example.apssolution.domain.enums.Role;
 import org.example.apssolution.dto.request.tool.CreateCategoryRequest;
-import org.example.apssolution.dto.request.tool.CreateToolRequest;
+import org.example.apssolution.dto.request.tool.UpsertToolRequest;
 import org.example.apssolution.dto.request.ParseXlsRequest;
 import org.example.apssolution.dto.request.tool.ParseToolXlsResponse;
-import org.example.apssolution.dto.response.tool.CreateCategoryResponse;
-import org.example.apssolution.dto.response.tool.UpsertToolResponse;
-import org.example.apssolution.repository.AccountRepository;
+import org.example.apssolution.dto.response.tool.*;
 import org.example.apssolution.repository.ToolCategoryRepository;
 import org.example.apssolution.repository.ToolRepository;
 import org.springframework.http.HttpStatus;
@@ -68,13 +64,14 @@ public class ToolController {
 
     @GetMapping("/category") //카테고리 전체 조회
     public ResponseEntity<?> getCategory() {
-        return ResponseEntity.status(HttpStatus.OK).body(toolCategoryRepository.findAll());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(CategoryListResponse.builder().categoryList(toolCategoryRepository.findAll()).build());
     }
 
 
     @Transactional
     @PutMapping //툴 벌크 수정
-    public ResponseEntity<?> upsertTools(@RequestBody @Valid CreateToolRequest ntr,
+    public ResponseEntity<?> upsertTools(@RequestBody @Valid UpsertToolRequest ntr,
                                          BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             FieldError fe = bindingResult.getFieldError();
@@ -83,10 +80,9 @@ public class ToolController {
 
         List<Tool> myTools = toolRepository.findAll();
         List<String> targetIds = ntr.getTools()
-                .stream().map(CreateToolRequest.Item::getToolId).toList();
+                .stream().map(UpsertToolRequest.Item::getToolId).toList();
         List<Tool> notContainsTools = myTools.stream()
                 .filter(t -> !targetIds.contains(t.getId())).toList();
-
 
 
         List<Tool> upsertTools = ntr.getTools().stream().map(item -> {
@@ -163,12 +159,15 @@ public class ToolController {
 
     @GetMapping // 툴 전체 조회
     public ResponseEntity<?> getTools() {
-        return ResponseEntity.status(HttpStatus.OK).body(toolRepository.findAll());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ToolListResponse.builder().tools(toolRepository.findAll()).build());
     }
 
 
     @GetMapping("/{toolId}") //툴 상세조회
     public ResponseEntity<?> getTool(@PathVariable("toolId") String toolId) {
-        return ResponseEntity.status(HttpStatus.OK).body(toolRepository.findById(toolId));
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ToolResponse.builder().tool(toolRepository.findById(toolId).orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "도구 정보를 불러올 수 없습니다."))).build());
     }
 }
