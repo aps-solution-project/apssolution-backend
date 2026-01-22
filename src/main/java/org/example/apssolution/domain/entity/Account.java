@@ -14,6 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class Account {
     @Id
+    @Column(length = 9)
     private String id;
     private String pw;
     private String name;
@@ -23,6 +24,7 @@ public class Account {
     private String email;
     private LocalDate workedAt;
     private LocalDate resignedAt;
+    private String profileImageUrl;
 
     @PrePersist
     public void prePersist() {

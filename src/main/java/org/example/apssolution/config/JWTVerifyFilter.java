@@ -9,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.apssolution.dto.response.config.FilterResponse;
+import org.example.apssolution.service.account.JwtProviderService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -29,7 +30,8 @@ public class JWTVerifyFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest req) throws ServletException {
         String uri = req.getRequestURI();
-        return true;
+
+        return uri.startsWith("/api/accounts/login");
     }
 
     @Override
@@ -46,6 +48,7 @@ public class JWTVerifyFilter extends OncePerRequestFilter {
         }
 
         String token = header.substring(7);
+
 
         if (token.isEmpty()) {
             fr.setMessage("Token is empty");
@@ -68,7 +71,9 @@ public class JWTVerifyFilter extends OncePerRequestFilter {
         }
 
         String sub = jwt.getSubject();
+        String role = jwt.getClaim("role").asString();
         req.setAttribute("tokenId", String.valueOf(sub));
+        req.setAttribute("role", role);
         filterChain.doFilter(req, resp);
     }
 }
