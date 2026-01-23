@@ -13,63 +13,66 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CreateNoticeService {
+
     private final NoticeRepository noticeRepository;
     private final ScenarioRepository scenarioRepository;
-    private final NoticeAttachmentRepository noticeAttachmentRepository;
+    private final NoticeAttachmentRepository attachmentRepository;
 
     @Transactional
-    public void create(CreateNoticeRequest request,
-                       List<MultipartFile> attachments,
-                       Account writer
-    ) {
+    public Long create(CreateNoticeRequest request, Account me) throws IOException {
+
+        Scenario scenario = null;
+        if (request.getScenarioId() != null) {
+            scenario = scenarioRepository.findById(request.getScenarioId())
+                    .orElseThrow(() -> new IllegalStateException("시나리오 없음"));
+        }
+
         Notice notice = Notice.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
-                .writer(writer)
+                .writer(me)
+                .scenario(scenario)
                 .build();
-
-        if (request.getScenarioId() != null) {
-            Scenario scenario = scenarioRepository
-                    .findById(request.getScenarioId())
-                    .orElseThrow(() -> new IllegalArgumentException("시나리오 없음"));
-            notice.setScenario(scenario);
-        }
 
         noticeRepository.save(notice);
 
-        saveAttachments(notice, attachments);
-    }
+        // 첨부파일은 선택
+        List<MultipartFile> attachments = request.getAttachment();
 
-    private void saveAttachments(
-            Notice notice,
-            List<MultipartFile> attachments
-    ) {
-        if (attachments == null || attachments.isEmpty()) {
-            return;
+        if (attachments != null && !attachments.isEmpty()) {
+            for (MultipartFile file : attachments) {
+                if (file.isEmpty()) continue;
+
+                String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+                Path uploadPath = Path.of(System.getProperty("user.home"), "apssolution", "notices", uuid);
+
+                Files.createDirectories(uploadPath);
+
+                String originalFileName = file.getOriginalFilename();
+                Path filePath = uploadPath.resolve(originalFileName);
+                file.transferTo(filePath.toFile());
+
+                String fileUrl = "/apssolution/notices/" + uuid + "/" + originalFileName;
+
+                NoticeAttachment attachment = NoticeAttachment.builder()
+                        .notice(notice)
+                        .fileName(originalFileName)
+                        .fileType(file.getContentType())
+                        .fileUrl(fileUrl)
+                        .build();
+
+                attachmentRepository.save(attachment);
+            }
         }
-
-        for (MultipartFile file : attachments) {
-            // 실제로는 S3 업로드 같은 거 들어감
-            String fileUrl = uploadFile(file);
-
-            NoticeAttachment attachment = NoticeAttachment.builder()
-                    .notice(notice)
-                    .fileName(file.getOriginalFilename())
-                    .fileType(file.getContentType())
-                    .fileUrl(fileUrl)
-                    .build();
-
-            noticeAttachmentRepository.save(attachment);
-        }
-    }
-
-    private String uploadFile(MultipartFile file) {
-        // 임시
-        return "/files/" + file.getOriginalFilename();
+        return notice.getId();
     }
 }

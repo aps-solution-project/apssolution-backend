@@ -3,23 +3,22 @@ package org.example.apssolution.controller;
 import lombok.RequiredArgsConstructor;
 
 import org.example.apssolution.domain.entity.Account;
-import org.example.apssolution.domain.enums.Role;
+import org.example.apssolution.domain.entity.Notice;
 import org.example.apssolution.dto.request.notice.CreateNoticeRequest;
 import org.example.apssolution.dto.request.notice.EditNoticeRequest;
-import org.example.apssolution.dto.response.notice.NoticeResponse;
+import org.example.apssolution.dto.response.notice.NoticeActionResponse;
+import org.example.apssolution.dto.response.notice.NoticeDetailResponse;
+import org.example.apssolution.dto.response.notice.NoticeSearchResponse;
 import org.example.apssolution.repository.NoticeRepository;
-import org.example.apssolution.repository.ScenarioRepository;
 import org.example.apssolution.service.notice.CreateNoticeService;
 import org.example.apssolution.service.notice.DeleteNoticeService;
 import org.example.apssolution.service.notice.EditNoticeService;
 import org.example.apssolution.service.notice.SearchNoticeService;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 
@@ -36,52 +35,79 @@ public class NoticeController {
     private final NoticeRepository noticeRepository;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)    // 공지사항 등록
-    public ResponseEntity<?> createNotice(@RequestPart(value = "request") CreateNoticeRequest request,
-                                          @RequestPart(value = "attachment", required = false) List<MultipartFile> attachments,
-                                          @RequestAttribute("account") Account me
-    ) {
-        createNoticeService.create(request, attachments, me);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<NoticeActionResponse> createNotice(@ModelAttribute CreateNoticeRequest request,
+                                                             @RequestAttribute("account") Account me) throws IOException {
+        Long savedId = createNoticeService.create(request, me);
+
+        return ResponseEntity.ok(NoticeActionResponse.builder().success(true).message("공지사항이 등록되었습니다.")
+                .noticeId(savedId).build());
     }
 
-    @GetMapping // 공지사항 전제 조회
-    public List<NoticeResponse> getNotice() {
-        return noticeRepository.findAll().stream().map(NoticeResponse::from).toList();
+    @GetMapping // 공지사항 전체 조회
+    public List<NoticeActionResponse> getNotice() {
+        return noticeRepository.findAll().stream()
+                .map(notice -> NoticeActionResponse.builder().noticeId(notice.getId())
+                        .title(notice.getTitle()).writerName(notice.getWriter().getName())
+                        .success(true).build()).toList();
     }
 
-    @PutMapping(value = "/{noticeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> editNotice(@PathVariable Long noticeId, @RequestPart("request") EditNoticeRequest request,
-                                        @RequestPart(value = "attachment", required = false) List<MultipartFile> attachments,
-                                        @RequestAttribute("account") Account me
-    ) {
+    @PatchMapping("/{noticeId}") // 공지사항 수정
+    public ResponseEntity<NoticeActionResponse> editNotice(@PathVariable Long noticeId,
+                                                           @ModelAttribute EditNoticeRequest request,
+                                                           @RequestAttribute("account") Account me) throws IOException {
+
         editNoticeService.edit(noticeId, request, me);
-        return ResponseEntity.ok().build();
+
+        return ResponseEntity.ok(NoticeActionResponse.builder().success(true).message("수정 완료")
+                .noticeId(noticeId).build());
     }
 
     @DeleteMapping("/{noticeId}")  // 공지사항 삭제
-    public ResponseEntity<?> deleteNotice(@PathVariable Long noticeId, @RequestAttribute("account") Account me) {
+    public ResponseEntity<NoticeActionResponse> deleteNotice(@PathVariable Long noticeId, @RequestAttribute("account") Account me) {
         deleteNoticeService.delete(noticeId, me);
-        return ResponseEntity.ok("공지 삭제 완료");
+
+        return ResponseEntity.ok(NoticeActionResponse.builder().success(true).message("공지 삭제 완료")
+                .noticeId(noticeId).build());
     }
 
     @GetMapping("/{noticeId}")  // 공지사항 상세 조회
-    public ResponseEntity<?> getDetailNotice(@PathVariable Long noticeId) {
-        return null;
+    public ResponseEntity<NoticeDetailResponse> getNotice(@PathVariable Long noticeId) {
+        Notice notice = noticeRepository.findById(noticeId).orElseThrow();
+        return ResponseEntity.ok(NoticeDetailResponse.from(notice));
     }
 
     @GetMapping("/search")   // 공지사항 검색
-    public ResponseEntity<?> searchNotice(@RequestParam(required = false) String keyword,
-                                          @RequestParam(required = false) String scenarioId) {
-        List<NoticeResponse> result = searchNoticeService.search(keyword, scenarioId).stream()
-                        .map(NoticeResponse::from).toList();
+    public ResponseEntity<List<NoticeSearchResponse>> searchNotice(@RequestParam(required = false) String keyword,
+                                                                   @RequestParam(required = false) String scenarioId) {
+        List<NoticeSearchResponse> result = searchNoticeService.search(keyword, scenarioId).stream()
+                .map(notice -> {
+                    // 본문 요약 (50자)
+                    String summary = notice.getContent();
+                    if (summary != null && summary.length() > 50) {
+                        summary = summary.substring(0, 50) + "...";
+                    }
+
+                    return NoticeSearchResponse.builder()
+                            .noticeId(notice.getId())
+                            .title(notice.getTitle())
+                            .content(summary)
+                            .writerName(notice.getWriter().getName())
+                            .createdAt(notice.getCreatedAt())
+                            // 시나리오가 있을 때만 정보 세팅
+                            .scenarioId(notice.getScenario() != null ? notice.getScenario().getId() : null)
+                            .scenarioTitle(notice.getScenario() != null ? notice.getScenario().getTitle() : "일반 공지")
+                            .build();
+                }).toList();
 
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/myNotice")    // 내가 쓴 글 찾기
-    public ResponseEntity<?> myNotice(@RequestAttribute("account") Account me) {
-        List<NoticeResponse> result = searchNoticeService.myNotices(me).stream()
-                        .map(NoticeResponse::from).toList();
+    @GetMapping("/myNotice")    // 내가 쓴 글 조회
+    public ResponseEntity<List<NoticeActionResponse>> myNotice(@RequestAttribute("account") Account me) {
+        List<NoticeActionResponse> result = searchNoticeService.myNotices(me).stream()
+                .map(notice -> NoticeActionResponse.builder().noticeId(notice.getId())
+                        .title(notice.getTitle()).writerName(notice.getWriter().getName())
+                        .success(true).build()).toList();
 
         return ResponseEntity.ok(result);
     }
