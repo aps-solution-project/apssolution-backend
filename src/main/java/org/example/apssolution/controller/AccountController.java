@@ -14,9 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 
-@Slf4j
 @CrossOrigin
 @RestController
 @RequiredArgsConstructor
@@ -28,12 +31,11 @@ public class AccountController {
     private final AccountRepository accountRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EditAccountAdminService editAccountAdminService;
-    private final EditAccountService editAccountService;
+    //private final EditAccountService editAccountService;
     private final EditAccountPasswordService editAccountPasswordService;
     private final ResignAccountService resignAccountService;
 
     private final GetAccountService getAccountService;
-
 
     @PostMapping    // 사원 등록
     public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request,
@@ -65,12 +67,18 @@ public class AccountController {
         }
 
         String token = jwtProviderService.createToken(account);
-        LoginResponse response = LoginResponse.builder().success(true).message("로그인 성공").accountId(account.getId())
-                .accountName(account.getName()).token(token).build();
+        LoginResponse response = LoginResponse.builder()
+                .success(true)
+                .message("로그인 성공")
+                .accountId(account.getId())
+                .accountName(account.getName())
+                .token(token)
+                .role(account.getRole())
+                .build();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PutMapping("/{accountId}") // 관리자 사원 정보 수정
+    @PatchMapping("/{accountId}") // 관리자 사원 정보 수정
     public ResponseEntity<?> editAccountAdmin(@PathVariable String accountId,
                                               @RequestBody EditAccountAdminRequest request,
                                               @RequestAttribute("role") String role) {
@@ -79,7 +87,7 @@ public class AccountController {
         }
 
         ServiceResultResponse result = editAccountAdminService.editAccountAdmin(accountId, role, request);
-        if(!result.isSuccess()) {
+        if (!result.isSuccess()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
         }
 
@@ -105,33 +113,56 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PutMapping("/{accountId}/edit")    // 사원 본인 정보 수정
-    public ResponseEntity<?> editAccount(@PathVariable String accountId, @RequestBody EditAccountRequest request,
-                                         @RequestAttribute("tokenId") String tokenId) {
-        if (!tokenId.equals(accountId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("본인의 정보만 수정할 수 있습니다.");
-        }
+//    @PatchMapping("/{accountId}/edit")    // 사원 본인 정보 수정
+//    public ResponseEntity<?> editAccount(@PathVariable String accountId, @RequestBody EditAccountRequest request,
+//                                         @RequestAttribute("tokenId") String tokenId) {
+//        if (!tokenId.equals(accountId)) {
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("본인의 정보만 수정할 수 있습니다.");
+//        }
+//
+//        ServiceResultResponse result = editAccountService.editAccount(tokenId, request);
+//
+//        if (result.isSuccess()) {
+//            EditAccountResponse response = EditAccountResponse.builder().success(true)
+//                    .message(result.getMessage()).build();
+//            return ResponseEntity.status(HttpStatus.OK).body(response);
+//        } else {
+//            EditAccountResponse response = EditAccountResponse.builder().success(false)
+//                    .message(result.getMessage()).build();
+//            if ("존재하지 않는 계정입니다.".equals(result.getMessage())) {
+//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.getMessage());
+//            } else if ("퇴사한 계정은 수정할 수 없습니다.".equals(result.getMessage())) {
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
+//            } else {
+//                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result.getMessage());
+//            }
+//        }
+//    }
 
-        ServiceResultResponse result = editAccountService.editAccount(tokenId, request);
+    @PatchMapping("/{accountId}/edit")
+    public ResponseEntity<?> editAccount(@PathVariable String accountId,
+                                         @ModelAttribute EditAccountRequest request,
+                                         @RequestAttribute Account account) throws IOException {
+        Path uplodadPath = Path.of(System.getProperty("user.home"), "apssolution", "profile", accountId);
+        Files.createDirectories(uplodadPath);
 
-        if (result.isSuccess()) {
-            EditAccountResponse response = EditAccountResponse.builder().success(true)
-                    .message(result.getMessage()).build();
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-        } else {
-            EditAccountResponse response = EditAccountResponse.builder().success(false)
-                    .message(result.getMessage()).build();
-            if ("존재하지 않는 계정입니다.".equals(result.getMessage())) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.getMessage());
-            } else if ("퇴사한 계정은 수정할 수 없습니다.".equals(result.getMessage())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
-            } else {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result.getMessage());
-            }
-        }
+        String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+        Path filePath = uplodadPath.resolve(uuid);
+        request.getProfileImage().transferTo(filePath.toFile());
+
+        String imageUri = "/apssolution/profile/" + accountId + "/" + uuid;
+
+        account.setProfileImageUrl(imageUri);
+        accountRepository.save(account);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(EditAccountResponse.builder()
+                        .success(true)
+                        .message("Account Edit Complete")
+                        .build());
     }
 
-    @PutMapping("/{accountId}/password")    // 비밀번호 변경
+    @PatchMapping("/{accountId}/password")    // 비밀번호 변경
     public ResponseEntity<?> editPassword(@PathVariable String accountId,
                                           @RequestBody EditAccountPasswordRequest request,
                                           @RequestAttribute("tokenId") String tokenId,
@@ -152,7 +183,7 @@ public class AccountController {
         }
     }
 
-    @PutMapping("/{accountId}/resign") // 사원 퇴직 처리
+    @DeleteMapping("/{accountId}/resign") // 사원 퇴직 처리
     public ResponseEntity<?> resignAccount(@PathVariable String accountId, @RequestAttribute("role") String role) {
         if (!Role.ADMIN.name().equals(role)) {
             return ResponseEntity

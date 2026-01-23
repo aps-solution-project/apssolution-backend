@@ -73,7 +73,7 @@ public class TaskController {
         int update = myTasks.size() - delete;
         int created = upsertTasks.size() - update;
 
-        return ResponseEntity.status(HttpStatus.CREATED).
+        return ResponseEntity.status(HttpStatus.OK).
                 body(UpsertTaskResponse.builder()
                         .created(created).deleted(delete).updated(update).build());
     }

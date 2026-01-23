@@ -10,12 +10,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        Path.of(System.getProperty("user.home"), "apssolution", "profile");
-        String uploadDirPath = Paths.get(System.getProperty("user.home"), "apssolution", "profile")
-                .toAbsolutePath()
-                .toString();
-
-        registry.addResourceHandler("/car-images/**")
-                .addResourceLocations("file:" + uploadDirPath + "/");
+        registry.addResourceHandler("/apssolution/profile/**").addResourceLocations(
+                Path.of(System.getProperty("user.home"), "apssolution", "profile").toUri().toString()
+        );
     }
 }
