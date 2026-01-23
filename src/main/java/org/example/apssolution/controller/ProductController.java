@@ -67,7 +67,7 @@ public class ProductController {
         int update = myProducts.size() - delete;
         int created = upsertProducts.size() - update;
 
-        return ResponseEntity.status(HttpStatus.CREATED).
+        return ResponseEntity.status(HttpStatus.OK).
                 body(UpsertProductResponse.builder()
                         .created(created).deleted(delete).updated(update).build());
     }

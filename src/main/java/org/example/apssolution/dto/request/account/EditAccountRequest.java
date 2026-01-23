@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
 @Setter
@@ -14,5 +15,5 @@ import org.springframework.stereotype.Service;
 public class EditAccountRequest {
     @Email
     String email;
-    String profileImageUrl;
+    MultipartFile profileImage;
 }

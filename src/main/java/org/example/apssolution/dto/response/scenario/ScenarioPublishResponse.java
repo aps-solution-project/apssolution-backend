@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
-public class ScenarioResponse {
-    private ScenarioResponse.Item scenario;
+public class ScenarioPublishResponse {
+    private ScenarioPublishResponse.Item scenario;
 
     @Getter
     @Setter
@@ -27,8 +27,8 @@ public class ScenarioResponse {
         private Boolean published;
     }
 
-    public static ScenarioResponse.Item from(Scenario scenario) {
-        return ScenarioResponse.Item.builder()
+    public static ScenarioPublishResponse.Item from(Scenario scenario) {
+        return ScenarioPublishResponse.Item.builder()
                 .id(scenario.getId())
                 .title(scenario.getTitle())
                 .description(scenario.getDescription())
