@@ -16,8 +16,6 @@ import org.example.apssolution.domain.enums.Role;
 @Builder
 public class CreateAccountRequest {
     @NotBlank
-    private String accountId;
-    @NotBlank
     private String pw;
     @NotBlank
     private String name;

@@ -3,9 +3,11 @@ package org.example.apssolution.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
+import org.example.apssolution.dto.api_response.SolveApiResult;
 import org.example.apssolution.dto.request.scenario.CreateScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioScheduleRequest;
+import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.dto.response.scenario.*;
 import org.example.apssolution.repository.*;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -29,6 +32,7 @@ public class ScenarioController {
     final ProductRepository productRepository;
     final AccountRepository accountRepository;
     final ToolRepository toolRepository;
+    final TaskRepository taskRepository;
 
     @PostMapping // 시나리오 생성
     public ResponseEntity<?> postScenario(@RequestBody @Valid CreateScenarioRequest csr,
@@ -203,5 +207,28 @@ public class ScenarioController {
                 .body(EditScenarioScheduleResponse.builder()
                         .scenarioSchedule(EditScenarioScheduleResponse.from(scenarioSchedule))
                         .build());
+    }
+
+
+    @PostMapping("/{scenarioId}/simulate") // scenario simulation 수정중
+    public ResponseEntity<?> simulateScenario(@PathVariable String scenarioId) {
+
+        Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(()->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
+
+        List<Task> myTasks = taskRepository.findAll();
+        List<Tool> myTools = toolRepository.findAll();
+
+        RestClient restClient = RestClient.create();
+        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, myTools);
+
+        SolveApiResult result = restClient.post()
+                .uri("http://127.0.0.1:5000/api/solve")
+                .body(request).retrieve()
+                .body(SolveApiResult.class);
+
+
+
+        return ResponseEntity.status(HttpStatus.OK).body(null);
     }
 }

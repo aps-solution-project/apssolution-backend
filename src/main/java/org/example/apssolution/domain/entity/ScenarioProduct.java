@@ -1,5 +1,6 @@
 package org.example.apssolution.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,6 +15,7 @@ public class ScenarioProduct {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne
     private Scenario scenario;
 
@@ -21,4 +23,5 @@ public class ScenarioProduct {
     private Product product;
 
     private Integer qty;
+
 }
