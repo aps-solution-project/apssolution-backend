@@ -31,10 +31,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 );
 
         if (account.getResignedAt() != null) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "퇴사자 계정입니다"
-            );
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "퇴사자 계정입니다");
         }
 
         request.setAttribute("account", account);
