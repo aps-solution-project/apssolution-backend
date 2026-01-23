@@ -21,6 +21,9 @@ public class AuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
+        if(request.getMethod().equals("OPTIONS")){
+            return true;
+        }
         String tokenId = (String) request.getAttribute("tokenId");
         Account account = accountRepository.findById(tokenId)
                 .orElseThrow(() ->
