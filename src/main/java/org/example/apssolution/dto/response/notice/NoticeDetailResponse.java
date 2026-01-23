@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 @Getter
 @Builder
 public class NoticeDetailResponse {
-    private Long id;
+    private Long noticeId;
     private String title;
     private String content;
     private String writerName;
@@ -28,7 +28,7 @@ public class NoticeDetailResponse {
 
     public static NoticeDetailResponse from(Notice notice) {
         return NoticeDetailResponse.builder()
-                .id(notice.getId())
+                .noticeId(notice.getId())
                 .title(notice.getTitle())
                 .content(notice.getContent())
                 .writerName(notice.getWriter().getName())
