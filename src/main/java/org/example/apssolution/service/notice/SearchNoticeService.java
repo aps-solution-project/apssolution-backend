@@ -3,12 +3,7 @@ package org.example.apssolution.service.notice;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Notice;
-import org.example.apssolution.dto.request.notice.CreateNoticeRequest;
-import org.example.apssolution.dto.response.notice.NoticeResponse;
 import org.example.apssolution.repository.NoticeRepository;
-import org.example.apssolution.repository.ScenarioRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

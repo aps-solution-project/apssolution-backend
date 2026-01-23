@@ -13,5 +13,11 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/apssolution/profile/**").addResourceLocations(
                 Path.of(System.getProperty("user.home"), "apssolution", "profile").toUri().toString()
         );
+
+        registry.addResourceHandler("/apssolution/notices/**")
+                .addResourceLocations(
+                        Path.of(System.getProperty("user.home"), "apssolution", "notices")
+                                .toUri().toString() + "/"
+                );
     }
 }
