@@ -40,7 +40,9 @@ public class AccountController {
     @PostMapping    // 사원 등록
     public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request,
                                            @RequestAttribute("role") String role) {
-
+        if (request.getPw() == null){
+            request.setPw(UUID.randomUUID().toString().split("-")[0]);
+        }
         Account account = createAccountService.createAccount(request);
         CreateAccountResponse response = CreateAccountResponse.builder().success(true)
                 .message("사원등록 완료(메일 전송 완료)")
