@@ -8,5 +8,6 @@ import lombok.Setter;
 @Setter
 @Builder
 public class SimulateScenarioResponse {
-
+    private String scenarioId;
+    private String status;
 }

@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @CrossOrigin
@@ -213,7 +214,7 @@ public class ScenarioController {
     @PostMapping("/{scenarioId}/simulate") // scenario simulation 수정중
     public ResponseEntity<?> simulateScenario(@PathVariable String scenarioId) {
 
-        Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(()->
+        Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
 
         List<Task> myTasks = taskRepository.findAll();
@@ -227,8 +228,28 @@ public class ScenarioController {
                 .body(request).retrieve()
                 .body(SolveApiResult.class);
 
+        scenario.setStatus(result.getStatus() == null ? "ERROR" : result.getStatus());
+        scenario.setMakespan(result.getMakespan());
 
+        //받은 데이터 ScenarioSchedule로 바꿔서 저장하기 코드 추가 (2026.01.26 숙제)
+        List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
+            return ScenarioSchedule.builder()
+                    .scenario(scenario)
+                    .product(productRepository.findById(s.getProductId()).orElse(null))
+                    .task(taskRepository.findById(s.getTaskId()).orElse(null))
+                    .worker(null)
+                    .tool(toolRepository.findById(s.getToolId()).orElse(null))
+                    .startAt(scenario.getStartAt().plusMinutes(s.getStart()))
+                    .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
+                    .build();
+        }).toList();
 
-        return ResponseEntity.status(HttpStatus.OK).body(null);
+        scenarioRepository.save(scenario);
+        scenarioScheduleRepository.saveAll(scenarioSchedules);
+
+        return ResponseEntity.status(HttpStatus.OK).body(SimulateScenarioResponse.builder()
+                .scenarioId(scenarioId)
+                .status(result.getStatus())
+                .build());
     }
 }
