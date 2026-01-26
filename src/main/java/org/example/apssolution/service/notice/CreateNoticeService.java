@@ -31,10 +31,10 @@ public class CreateNoticeService {
     public Long create(CreateNoticeRequest request, Account me) throws IOException {
 
         Scenario scenario = null;
-        if (request.getScenarioId() != null) {
-            scenario = scenarioRepository.findById(request.getScenarioId())
-                    .orElseThrow(() -> new IllegalStateException("시나리오 없음"));
-        }
+//        if (request.getScenarioId() != null) {
+//            scenario = scenarioRepository.findById(request.getScenarioId())
+//                    .orElseThrow(() -> new IllegalStateException("시나리오 없음"));
+//        }
 
         Notice notice = Notice.builder()
                 .title(request.getTitle())
