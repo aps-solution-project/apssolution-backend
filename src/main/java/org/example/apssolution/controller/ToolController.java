@@ -38,7 +38,7 @@ import java.util.List;
 @CrossOrigin
 @RequestMapping("/api/tools")
 @SecurityRequirement(name="bearerAuth")
-@Tag(name = "도구 API", description = "도구 및 도구 카테고리 관리 API")
+@Tag(name = "Tool", description = "도구 및 도구 카테고리 관리 API")
 public class ToolController {
     final ToolRepository toolRepository;
     final ToolCategoryRepository toolCategoryRepository;

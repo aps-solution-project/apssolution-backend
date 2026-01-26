@@ -30,7 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/notices")
 @SecurityRequirement(name="bearerAuth")
-@Tag(name = "공지사항 API", description = "공지사항 등록, 조회, 수정, 삭제 및 검색")
+@Tag(name = "Notice", description = "공지사항 등록, 조회, 수정, 삭제 및 검색 API")
 public class NoticeController {
 
     private final SearchNoticeService searchNoticeService;

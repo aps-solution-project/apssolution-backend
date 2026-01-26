@@ -39,7 +39,7 @@ import java.util.List;
 @CrossOrigin
 @RequestMapping("/api/tasks")
 @SecurityRequirement(name="bearerAuth")
-@Tag(name = "공정 API", description = "작업 공정 관리 API")
+@Tag(name = "Task", description = "작업 공정 관리 API")
 public class TaskController {
     final TaskRepository taskRepository;
     final ProductRepository productRepository;

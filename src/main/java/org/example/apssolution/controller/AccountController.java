@@ -27,7 +27,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/accounts")
-@Tag(name = "사원 API", description = "사원 등록, 조회 및 수정")
+@Tag(name = "Account", description = "사원 등록, 조회 및 수정 API")
 public class AccountController {
 
     private final CreateAccountService createAccountService;
