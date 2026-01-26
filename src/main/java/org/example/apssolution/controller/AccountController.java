@@ -8,11 +8,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.enums.Role;
 import org.example.apssolution.dto.request.account.*;
-import org.example.apssolution.dto.response.ErrorResponse;
 import org.example.apssolution.dto.response.account.*;
 import org.example.apssolution.dto.response.service.ServiceResultResponse;
 import org.example.apssolution.repository.AccountRepository;
@@ -52,10 +50,14 @@ public class AccountController {
     @Operation(summary = "사원 등록", description = "신규 사원 계정을 생성하는 API. 사원번호는 시스템에서 자동 생성, " +
             "임시 비밀번호는 랜덤 값으로 생성 후 이메일로 발송처리")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "사원 등록 성공", content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = CreateAccountResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))})
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "사원 등록 성공",
+                    content = @Content(schema = @Schema(implementation = CreateAccountResponse.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "요청 값 검증 실패"),
+            @ApiResponse(responseCode = "409", description = "이미 존재하는 사원")
+    })
     public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request) {
 
         Account account = createAccountService.createAccount(request);
@@ -70,29 +72,23 @@ public class AccountController {
     @Operation(summary = "사원 로그인", description = "사원 계정 로그인을 처리하는 API. 사원번호와 비밀번호를 검증한 후 JWT 토큰을 발급. 퇴사 처리된 계정은 로그인할 수 없다.")
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "200", description = "로그인 성공", content = @Content(schema = @Schema(implementation = LoginResponse.class))
+                    responseCode = "200",
+                    description = "로그인 성공",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
             ),
-            @ApiResponse(
-                    responseCode = "401", description = "비밀번호 불일치", content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404", description = "사원번호 없음", content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "409", description = "퇴사 처리된 계정", content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            )
+            @ApiResponse(responseCode = "401", description = "비밀번호 불일치"),
+            @ApiResponse(responseCode = "404", description = "사원번호 없음"),
+            @ApiResponse(responseCode = "409", description = "퇴사 처리된 계정")
     })
     public ResponseEntity<?> postLogin(@RequestBody LoginAccountRequest request) {
-        Account account = accountRepository.findById(request.getAccountId()).orElse(null);
-
-        if (account == null) {
-            return ResponseEntity.badRequest().body("존재하지 않은 사원번호 입니다.");
-        }
+        Account account = accountRepository.findById(request.getAccountId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "존재하지 않는 사원번호입니다."));
         if (!passwordEncoder.matches(request.getPw(), account.getPw())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
         }
         if (account.getResignedAt() != null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("퇴사 처리된 계정입니다");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "퇴사 처리된 계정입니다.");
         }
 
         String token = jwtProviderService.createToken(account);
@@ -110,16 +106,21 @@ public class AccountController {
     @PatchMapping("/{accountId}") // 관리자 사원 정보 수정
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "관리자용 사원 정보 수정", description = "관리자가 특정 사원의 정보를 수정하는 API. 일반 사원은 접근 권한 없음.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "사원 정보 수정 성공"),
+            @ApiResponse(responseCode = "403", description = "권한 없음"),
+            @ApiResponse(responseCode = "404", description = "사원 없음")
+    })
     public ResponseEntity<?> editAccountAdmin(@PathVariable String accountId,
                                               @RequestBody EditAccountAdminRequest request,
                                               @RequestAttribute("role") String role) {
-        if (Role.ADMIN.name().equals(role)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("ADMIN 권한이 필요합니다");
+        if (!Role.ADMIN.name().equals(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ADMIN 권한 필요");
         }
 
         ServiceResultResponse result = editAccountAdminService.editAccountAdmin(accountId, role, request);
         if (!result.isSuccess()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, result.getMessage());
         }
 
         return ResponseEntity.ok("사원 정보 수정 완료");
@@ -128,6 +129,14 @@ public class AccountController {
     @GetMapping // 전체 사원 조회
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "전체 사원 조회", description = "시스템에 등록된 모든 사원 정보 조회. 퇴사 여부를 포함한 사원 목록 반환.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = GetAccountAllResponse.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     public ResponseEntity<?> getAccounts() {
         List<Account> allAccount = accountRepository.findAll();
         List<GetAccountDTO> accountDTOS = allAccount.stream().map(e -> GetAccountDTO.builder()
@@ -143,14 +152,32 @@ public class AccountController {
     @GetMapping("/{accountId}") // 사원 상세 조회
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "사원 상세 조회", description = "사원번호 기준으로 단일 사원 상세 정보를 조회.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = GetAccountDetailResponse.class))
+            ),
+            @ApiResponse(responseCode = "404", description = "사원 없음"),
+            @ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     public ResponseEntity<?> getAccount(@PathVariable String accountId) {
-        GetAccountResponse response = getAccountService.getAccount(accountId);
+        GetAccountDetailResponse response = getAccountService.getAccount(accountId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @PatchMapping("/{accountId}/edit") // 본인 프로필 수정
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "사원용 정보 수정", description = "로그인한 사원이 본인 프로필 정보를 수정하는 API. 프로필 이미지를 포함한 정보 수정 가능")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "수정 성공",
+                    content = @Content(schema = @Schema(implementation = EditAccountResponse.class))
+            ),
+            @ApiResponse(responseCode = "403", description = "본인 계정 아님"),
+            @ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     public ResponseEntity<?> editAccount(@PathVariable String accountId,
                                          @ModelAttribute EditAccountRequest request,
                                          @RequestAttribute Account account) throws IOException {
@@ -176,42 +203,53 @@ public class AccountController {
     @PatchMapping("/{accountId}/password")    // 비밀번호 변경
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "사원용 비밀번호 변경", description = "로그인한 사원이 본인 비밀번호 변경. 본인 계정이 아닌 경우 접근 불가.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "변경 성공"),
+            @ApiResponse(responseCode = "403", description = "본인 계정 아님"),
+            @ApiResponse(responseCode = "404", description = "사원 없음"),
+            @ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     public ResponseEntity<?> editPassword(@PathVariable String accountId,
                                           @RequestBody EditAccountPasswordRequest request,
                                           @RequestAttribute("tokenId") String tokenId,
                                           @RequestAttribute("role") String role) {
         if (!tokenId.equals(accountId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("본인의 비밀번호만 수정할 수 있습니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 비밀번호만 수정할 수 있습니다.");
         }
 
+
         ServiceResultResponse result = editAccountPasswordService.editPw(accountId, request);
-        if (result.isSuccess()) {
-            return ResponseEntity.ok(result.getMessage());
-        } else {
-            if ("존재하지 않는 사원입니다.".equals(result.getMessage())) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.getMessage());
-            } else {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result.getMessage());
-            }
+        if (!result.isSuccess()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    result.getMessage()
+            );
         }
+
+        return ResponseEntity.ok("비밀번호 변경 완료");
     }
 
     @DeleteMapping("/{accountId}/resign") // 사원 퇴직 처리
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "퇴직 사원 등록", description = "특정 사원을 퇴직 상태로 변경. 관리자 권한 필요.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "퇴직 처리 성공",
+                    content = @Content(schema = @Schema(implementation = ResignAccountResponse.class))
+            ),
+            @ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "사원 없음")
+    })
     public ResponseEntity<?> resignAccount(@PathVariable String accountId, @RequestAttribute("role") String role) {
         if (!Role.ADMIN.name().equals(role)) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body("ADMIN 권한이 필요합니다.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ADMIN 권한이 필요합니다.");
         }
 
         ServiceResultResponse result = resignAccountService.resign(accountId);
 
         if (!result.isSuccess()) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(result.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, result.getMessage());
         }
 
         ResignAccountResponse response = ResignAccountResponse.builder().success(true).message("퇴직 처리 완료").build();
