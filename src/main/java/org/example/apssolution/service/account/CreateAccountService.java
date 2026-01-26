@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -30,24 +31,18 @@ public class CreateAccountService {
             throw new IllegalStateException("사원번호 중복");
         }
 
+        String uuidPw = generatePassword();
         Account account = Account.builder()
                 .id(accountId)
                 .name(request.getName())
                 .email(request.getEmail())
                 .role(request.getRole())
-                .profileImageUrl(request.getProfileImageUrl())
-                .pw(passwordEncoder.encode(request.getPw()))
+                .pw(passwordEncoder.encode(uuidPw))
                 .build();
 
         accountRepository.save(account);
 
-        SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo(request.getEmail());
-        mailMessage.setSubject("사원등록 완료");
-        mailMessage.setText("\n사원번호 : " +  account.getId() +
-                "\n초기 비밀번호 : " + request.getPw() +
-                "입니다.\n\n로그인 후 반드시 비밀번호 변경바랍니다.");
-        javaMailSender.send(mailMessage);
+        sendWelcomeMail(account, uuidPw);
 
         return account;
 
@@ -64,5 +59,24 @@ public class CreateAccountService {
         } while (accountRepository.existsById(accountId));
 
         return accountId;
+    }
+
+    private String generatePassword() {
+        return UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 10);
+    }
+
+    private void sendWelcomeMail(Account account, String uuidPw) {
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo(account.getEmail());
+        mailMessage.setSubject("사원등록 완료");
+        mailMessage.setText(
+                "사원번호 : " + account.getId() +
+                        "\n임시 비밀번호 : " + uuidPw +
+                        "\n\n로그인 후 반드시 비밀번호를 변경해주세요."
+        );
+        javaMailSender.send(mailMessage);
     }
 }
