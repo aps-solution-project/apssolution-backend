@@ -1,6 +1,10 @@
 package org.example.apssolution.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.enums.Role;
 import org.example.apssolution.dto.request.account.*;
+import org.example.apssolution.dto.response.ErrorResponse;
 import org.example.apssolution.dto.response.account.*;
 import org.example.apssolution.dto.response.service.ServiceResultResponse;
 import org.example.apssolution.repository.AccountRepository;
@@ -16,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,6 +51,11 @@ public class AccountController {
     @SecurityRequirement(name="bearerAuth")
     @Operation(summary = "사원 등록", description = "신규 사원 계정을 생성하는 API. 사원번호는 시스템에서 자동 생성, " +
             "임시 비밀번호는 랜덤 값으로 생성 후 이메일로 발송처리")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "사원 등록 성공", content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = CreateAccountResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))})
     public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request) {
 
         Account account = createAccountService.createAccount(request);
@@ -56,8 +67,21 @@ public class AccountController {
     }
 
     @PostMapping("/login")  // 로그인
-    @Operation(summary = "사원 로그인", description = "사원 계정 로그인을 처리하는 API. 사원번호와 비밀번호를 검증한 후 JWT 토큰을 발급. " +
-            "퇴사 처리된 계정은 로그인할 수 없다.")
+    @Operation(summary = "사원 로그인", description = "사원 계정 로그인을 처리하는 API. 사원번호와 비밀번호를 검증한 후 JWT 토큰을 발급. 퇴사 처리된 계정은 로그인할 수 없다.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200", description = "로그인 성공", content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401", description = "비밀번호 불일치", content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404", description = "사원번호 없음", content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409", description = "퇴사 처리된 계정", content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
     public ResponseEntity<?> postLogin(@RequestBody LoginAccountRequest request) {
         Account account = accountRepository.findById(request.getAccountId()).orElse(null);
 
@@ -65,7 +89,7 @@ public class AccountController {
             return ResponseEntity.badRequest().body("존재하지 않은 사원번호 입니다.");
         }
         if (!passwordEncoder.matches(request.getPw(), account.getPw())) {
-            return ResponseEntity.badRequest().body("비밀번호가 일치하지 않습니다.");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
         }
         if (account.getResignedAt() != null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("퇴사 처리된 계정입니다");
