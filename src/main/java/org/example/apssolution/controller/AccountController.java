@@ -1,5 +1,6 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.apssolution.domain.entity.Account;
@@ -38,6 +39,7 @@ public class AccountController {
     private final GetAccountService getAccountService;
 
     @PostMapping    // 사원 등록
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request,
                                            @RequestAttribute("role") String role) {
         if (request.getPw() == null){
@@ -78,6 +80,7 @@ public class AccountController {
     }
 
     @PatchMapping("/{accountId}") // 관리자 사원 정보 수정
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> editAccountAdmin(@PathVariable String accountId,
                                               @RequestBody EditAccountAdminRequest request,
                                               @RequestAttribute("role") String role) {
@@ -94,6 +97,7 @@ public class AccountController {
     }
 
     @GetMapping // 전체 사원 조회
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> getAccounts() {
         List<Account> allAccount = accountRepository.findAll();
         List<GetAccountDTO> accountDTOS = allAccount.stream().map(e -> GetAccountDTO.builder()
@@ -107,6 +111,7 @@ public class AccountController {
     }
 
     @GetMapping("/{accountId}") // 사원 상세 조회
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> getAccount(@PathVariable String accountId) {
         GetAccountResponse response = getAccountService.getAccount(accountId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -138,7 +143,8 @@ public class AccountController {
 //        }
 //    }
 
-    @PatchMapping("/{accountId}/edit")
+    @PatchMapping("/{accountId}/edit") // 본인 프로필 수정
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> editAccount(@PathVariable String accountId,
                                          @ModelAttribute EditAccountRequest request,
                                          @RequestAttribute Account account) throws IOException {
@@ -162,6 +168,7 @@ public class AccountController {
     }
 
     @PatchMapping("/{accountId}/password")    // 비밀번호 변경
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> editPassword(@PathVariable String accountId,
                                           @RequestBody EditAccountPasswordRequest request,
                                           @RequestAttribute("tokenId") String tokenId,
@@ -183,6 +190,7 @@ public class AccountController {
     }
 
     @DeleteMapping("/{accountId}/resign") // 사원 퇴직 처리
+    @SecurityRequirement(name="bearerAuth")
     public ResponseEntity<?> resignAccount(@PathVariable String accountId, @RequestAttribute("role") String role) {
         if (!Role.ADMIN.name().equals(role)) {
             return ResponseEntity

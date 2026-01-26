@@ -1,5 +1,6 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 
 import org.example.apssolution.domain.entity.Account;
@@ -26,6 +27,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/notices")
+@SecurityRequirement(name="bearerAuth")
 public class NoticeController {
 
     private final SearchNoticeService searchNoticeService;

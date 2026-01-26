@@ -1,5 +1,6 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -30,6 +31,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin
 @RequestMapping("/api/tools")
+@SecurityRequirement(name="bearerAuth")
 public class ToolController {
     final ToolRepository toolRepository;
     final ToolCategoryRepository toolCategoryRepository;

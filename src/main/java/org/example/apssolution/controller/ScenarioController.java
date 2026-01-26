@@ -1,5 +1,6 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
@@ -26,6 +27,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/scenarios")
+@SecurityRequirement(name="bearerAuth")
 public class ScenarioController {
     final ScenarioRepository scenarioRepository;
     final ScenarioProductRepository scenarioProductRepository;
