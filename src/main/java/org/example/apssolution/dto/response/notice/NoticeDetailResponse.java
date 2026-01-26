@@ -24,6 +24,7 @@ public class NoticeDetailResponse {
     public static class FileDto {
         private String fileName;
         private String fileUrl;
+        private String fileType;
     }
 
     public static NoticeDetailResponse from(Notice notice) {
@@ -38,6 +39,7 @@ public class NoticeDetailResponse {
                         .map(file -> FileDto.builder()
                                 .fileName(file.getFileName())
                                 .fileUrl(file.getFileUrl())
+                                .fileType(file.getFileType())
                                 .build())
                         .collect(Collectors.toList()))
                 .build();
