@@ -1,6 +1,8 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 import org.example.apssolution.domain.entity.Account;
@@ -28,6 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/notices")
 @SecurityRequirement(name="bearerAuth")
+@Tag(name = "Notice", description = "공지사항 등록, 조회, 수정, 삭제 및 검색 API")
 public class NoticeController {
 
     private final SearchNoticeService searchNoticeService;
@@ -37,6 +40,7 @@ public class NoticeController {
     private final NoticeRepository noticeRepository;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)    // 공지사항 등록
+    @Operation(summary = "공지사항 등록", description = "공지사항을 신규 등록. 제목, 내용, 시나리오 연결 여부를 설정할 수 있으며 첨부파일 업로드를 포함.")
     public ResponseEntity<NoticeActionResponse> createNotice(@ModelAttribute CreateNoticeRequest request,
                                                              @RequestAttribute("account") Account me) throws IOException {
         Long savedId = createNoticeService.create(request, me);
@@ -46,6 +50,7 @@ public class NoticeController {
     }
 
     @GetMapping // 공지사항 전체 조회
+    @Operation(summary = "공지사항 전체 조회", description = "시스템에 등록된 모든 공지사항 목록을 조회.")
     public List<NoticeActionResponse> getNotice() {
         return noticeRepository.findAll().stream()
                 .map(notice -> NoticeActionResponse.builder().noticeId(notice.getId())
@@ -54,6 +59,7 @@ public class NoticeController {
     }
 
     @PatchMapping("/{noticeId}") // 공지사항 수정
+    @Operation(summary = "공지사항 수정", description = "기존 공지사항 내용을 수정. 작성자 본인 또는 관리자만 수정 가능.")
     public ResponseEntity<NoticeActionResponse> editNotice(@PathVariable Long noticeId,
                                                            @ModelAttribute EditNoticeRequest request,
                                                            @RequestAttribute("account") Account me) throws IOException {
@@ -65,6 +71,7 @@ public class NoticeController {
     }
 
     @DeleteMapping("/{noticeId}")  // 공지사항 삭제
+    @Operation(summary = "공지사항 삭제", description = "공지사항을 삭제 처리. 작성자 본인 또는 관리자만 삭제 가능.")
     public ResponseEntity<NoticeActionResponse> deleteNotice(@PathVariable Long noticeId, @RequestAttribute("account") Account me) {
         deleteNoticeService.delete(noticeId, me);
 
@@ -73,12 +80,14 @@ public class NoticeController {
     }
 
     @GetMapping("/{noticeId}")  // 공지사항 상세 조회
+    @Operation(summary = "공지사항 상세 조회", description = "공지사항 ID 기준으로 상세 정보를 조회.")
     public ResponseEntity<NoticeDetailResponse> getNotice(@PathVariable Long noticeId) {
         Notice notice = noticeRepository.findById(noticeId).orElseThrow();
         return ResponseEntity.ok(NoticeDetailResponse.from(notice));
     }
 
     @GetMapping("/search")   // 공지사항 검색
+    @Operation(summary = "공지사항 검색", description = "키워드 또는 시나리오 ID 기준으로 공지사항을 검색. 키워드는 제목과 내용을 기준으로 검색.")
     public ResponseEntity<List<NoticeSearchResponse>> searchNotice(@RequestParam(required = false) String keyword,
                                                                    @RequestParam(required = false) String scenarioId) {
         List<NoticeSearchResponse> result = searchNoticeService.search(keyword, scenarioId).stream()
@@ -105,6 +114,7 @@ public class NoticeController {
     }
 
     @GetMapping("/myNotice")    // 내가 쓴 글 조회
+    @Operation(summary = "내 공지사항 조회", description = "로그인한 사용자가 작성한 공지사항 목록을 조회.")
     public ResponseEntity<List<NoticeActionResponse>> myNotice(@RequestAttribute("account") Account me) {
         List<NoticeActionResponse> result = searchNoticeService.myNotices(me).stream()
                 .map(notice -> NoticeActionResponse.builder().noticeId(notice.getId())

@@ -15,7 +15,6 @@ import org.example.apssolution.domain.enums.Role;
 @Setter
 @Builder
 public class CreateAccountRequest {
-    private String pw;
     @NotBlank
     private String name;
     @Enumerated(EnumType.STRING)
@@ -23,5 +22,4 @@ public class CreateAccountRequest {
     @NotEmpty
     @Email
     private String email;
-    private String profileImageUrl;
 }

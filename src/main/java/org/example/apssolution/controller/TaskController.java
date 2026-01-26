@@ -1,6 +1,10 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -15,6 +19,7 @@ import org.example.apssolution.repository.ProductRepository;
 import org.example.apssolution.repository.TaskRepository;
 import org.example.apssolution.repository.ToolCategoryRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
@@ -34,6 +39,7 @@ import java.util.List;
 @CrossOrigin
 @RequestMapping("/api/tasks")
 @SecurityRequirement(name="bearerAuth")
+@Tag(name = "Task", description = "작업 공정 관리 API")
 public class TaskController {
     final TaskRepository taskRepository;
     final ProductRepository productRepository;
@@ -41,6 +47,10 @@ public class TaskController {
 
     @Transactional
     @PutMapping // 작업 공정 벌크 수정
+    @Operation(summary = "작업 공정 벌크 수정", description = "전달된 작업 목록 기준으로 데이터를 동기화/ 없는 작업은 삭제, 존재하는 작업은 수정, 신규 작업은 생성")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "작업 동기화 완료"),
+            @ApiResponse(responseCode = "400", description = "요청 데이터 검증 실패"),
+            @ApiResponse(responseCode = "404", description = "품목 또는 카테고리 없음")})
     public ResponseEntity<?> upsertTasks(@RequestBody @Valid UpsertTaskRequest utr,
                                          BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -81,12 +91,17 @@ public class TaskController {
     }
 
     @GetMapping // 작업 전체 조회
+    @Operation(summary = "작업 전체 조회", description = "등록된 전체 작업 공정 목록 조회")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<?> getTasks() {
         return ResponseEntity.status(HttpStatus.OK).body(TaskListResponse.builder().tasks(taskRepository.findAll()));
     }
 
 
     @GetMapping("/{taskId}") // 작업 상세조회
+    @Operation(summary = "작업 상세 조회", description = "작업 ID 기준 단일 작업 조회")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "작업 없음")})
     public ResponseEntity<?> getTasks(@PathVariable("taskId") String taskId) {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(TaskResponse.builder().task(taskRepository.findById(taskId).orElseThrow(() ->
@@ -94,7 +109,10 @@ public class TaskController {
     }
 
 
-    @PostMapping("/xls/parse") // 작업 엑셀파일 파싱
+    @PostMapping(value = "/xls/parse", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) // 작업 엑셀파일 파싱
+    @Operation(summary = "작업 엑셀 파싱", description = "엑셀 파일 업로드 후 작업 공정 데이터 파싱")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "엑셀 파싱 성공"),
+            @ApiResponse(responseCode = "400", description = "엑셀 형식 오류 또는 파일 읽기 실패")})
     public ResponseEntity<?> parseTaskXls(@ModelAttribute ParseXlsRequest pxr) {
         ParseTaskXlsResponse resp = new ParseTaskXlsResponse();
         try (InputStream is = pxr.file().getInputStream();
