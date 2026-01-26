@@ -2,7 +2,6 @@ package org.example.apssolution.service.account;
 
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Account;
-import org.example.apssolution.dto.request.account.EditAccountPasswordAdminRequest;
 import org.example.apssolution.dto.request.account.EditAccountPasswordRequest;
 import org.example.apssolution.dto.response.service.ServiceResultResponse;
 import org.example.apssolution.repository.AccountRepository;
@@ -44,16 +43,16 @@ public class EditAccountPasswordService {
         return new ServiceResultResponse(true, "비밀번호가 변경되었습니다.");
     }
 
-    @Transactional
-    public ServiceResultResponse editPwAdmin(String targetId, EditAccountPasswordAdminRequest request) {
-        Account target = accountRepository.findById(targetId).orElse(null);
-
-        if (target == null) {
-            return new ServiceResultResponse(false, "존재하지 않는 사원입니다.");
-        }
-
-        target.setPw(request.getNewPw());
-
-        return new ServiceResultResponse(true, "사원의 비밀번호가 재설정되었습니다.");
-    }
+//    @Transactional
+//    public ServiceResultResponse editPwAdmin(String targetId, EditAccountPasswordAdminRequest request) {
+//        Account target = accountRepository.findById(targetId).orElse(null);
+//
+//        if (target == null) {
+//            return new ServiceResultResponse(false, "존재하지 않는 사원입니다.");
+//        }
+//
+//        target.setPw(request.getNewPw());
+//
+//        return new ServiceResultResponse(true, "사원의 비밀번호가 재설정되었습니다.");
+//    }
 }
