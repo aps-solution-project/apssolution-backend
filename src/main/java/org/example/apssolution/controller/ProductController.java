@@ -1,6 +1,13 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -24,6 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -32,11 +40,28 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin
 @RequestMapping("/api/products")
-@SecurityRequirement(name="bearerAuth")
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Product", description = "품목(Product) 관리 API")
 public class ProductController {
     final ProductRepository productRepository;
     final TaskRepository taskRepository;
 
+    @Operation(
+            summary = "품목 벌크 저장/수정",
+            description = "전달된 품목 목록 기준 기존 데이터 동기화 처리. 미존재 품목 삭제, 기존 품목 수정, 신규 품목 생성 수행"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "저장 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "created": 2,
+                                      "updated": 3,
+                                      "deleted": 1
+                                    }
+                                    """))),
+            @ApiResponse(responseCode = "400", description = "요청 값 검증 실패")
+    })
     @Transactional
     @PutMapping // 품목 벌크 수정
     public ResponseEntity<?> upsertProducts(@RequestBody @Valid UpsertProductRequest upr,
@@ -54,12 +79,16 @@ public class ProductController {
 
 
         List<Product> upsertProducts = upr.getProducts().stream().map(item -> {
-            return Product.builder()
-                    .id(item.getProductId())
-                    .name(item.getName())
-                    .description(item.getDescription())
-                    .active(true)
-                    .build();
+            Product product = productRepository.findById(item.getProductId())
+                    .orElseGet(() -> Product.builder()
+                            .id(item.getProductId())
+                            .active(true)
+                            .build());
+
+            product.setName(item.getName());
+            product.setDescription(item.getDescription());
+
+            return product;
         }).toList();
 
         productRepository.deleteAll(notContainsProducts);
@@ -75,6 +104,32 @@ public class ProductController {
     }
 
 
+    @Operation(
+            summary = "품목 전체 조회",
+            description = "등록된 모든 품목 목록을 조회."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(mediaType = "application/json",
+                    examples = @ExampleObject(value = """
+                            {
+                              "products": [
+                                {
+                                  "id": "BRD-01",
+                                  "name": "바게트",
+                                  "description": "겉은 바삭하고 속은 촉촉한 프랑스 전통 빵",
+                                  "active": true,
+                                  "createdAt": "2026-01-10T04:00:00"
+                                },
+                                {
+                                  "id": "BRD-02",
+                                  "name": "크루아상",
+                                  "description": "버터 풍미가 가득한 페이스트리",
+                                  "active": true,
+                                  "createdAt": "2026-01-11T04:10:00"
+                                }
+                              ]
+                            }
+                            """)))
     @GetMapping // 품목 전체 조회
     public ResponseEntity<?> getProducts() {
         return ResponseEntity.status(HttpStatus.OK)
@@ -82,6 +137,27 @@ public class ProductController {
     }
 
 
+    @Operation(
+            summary = "품목 상세 조회",
+            description = "품목 ID 기준 단일 품목 상세 정보 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "product": {
+                                        "id": "BRD-01",
+                                        "name": "바게트",
+                                        "description": "겉은 바삭하고 속은 촉촉한 프랑스 전통 빵",
+                                        "active": true,
+                                        "createdAt": "2026-01-10T04:00:00"
+                                      }
+                                    }
+                                    """)
+                    )),
+            @ApiResponse(responseCode = "404", description = "품목을 찾을 수 없음")
+    })
     @GetMapping("/{productId}") // 품목 상세 조회
     public ResponseEntity<?> getProduct(@PathVariable String productId) {
         return ResponseEntity.status(HttpStatus.OK)
@@ -90,7 +166,37 @@ public class ProductController {
     }
 
 
-    @PostMapping("/xls/parse") // 품목 엑셀파일 파싱
+    @Operation(
+            summary = "품목 엑셀 파일 파싱",
+            description = "업로드된 엑셀 파일 파싱 후 품목 데이터 미리보기 반환"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "파싱 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "products": [
+                                        {
+                                          "id": "BRD-03",
+                                          "name": "초코 머핀",
+                                          "description": "진한 초콜릿이 들어간 머핀",
+                                          "active": true,
+                                          "createdAt": null
+                                        },
+                                        {
+                                          "id": "BRD-04",
+                                          "name": "식빵",
+                                          "description": "부드러운 기본 식빵",
+                                          "active": false,
+                                          "createdAt": null
+                                        }
+                                      ]
+                                    }
+                                    """)
+                    )),
+            @ApiResponse(responseCode = "400", description = "파일 형식 오류 또는 읽기 실패")
+    })
+    @PostMapping(value = "/xls/parse", consumes = "multipart/form-data") // 품목 엑셀파일 파싱
     public ResponseEntity<?> parseProductXls(@ModelAttribute ParseXlsRequest pxr) {
         ParseProductXlsResponse resp = new ParseProductXlsResponse();
         try (InputStream is = pxr.file().getInputStream();
@@ -131,6 +237,47 @@ public class ProductController {
     }
 
 
+    @Operation(
+            summary = "품목별 작업 목록 조회",
+            description = "품목 ID 기준 단일 품목 상세 정보 조회 - 공정 순서(seq) 기준으로 정렬하여 조회"
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(mediaType = "application/json",
+                    examples = @ExampleObject(value = """
+                            {
+                              "tasks": [
+                                {
+                                  "id": "TASK-01",
+                                  "seq": 1,
+                                  "name": "반죽 혼합",
+                                  "description": "밀가루, 물, 이스트 재료를 혼합",
+                                  "duration": 20
+                                },
+                                {
+                                  "id": "TASK-02",
+                                  "seq": 2,
+                                  "name": "1차 발효",
+                                  "description": "온도와 습도를 맞춰 반죽 발효",
+                                  "duration": 60
+                                },
+                                {
+                                  "id": "TASK-03",
+                                  "seq": 3,
+                                  "name": "성형",
+                                  "description": "반죽을 빵 모양으로 성형",
+                                  "duration": 15
+                                },
+                                {
+                                  "id": "TASK-04",
+                                  "seq": 4,
+                                  "name": "굽기",
+                                  "description": "오븐에서 적정 온도로 굽기",
+                                  "duration": 25
+                                }
+                              ]
+                            }
+                            """)
+            ))
     @GetMapping("/{productId}/tasks") // 품목 아이디로 하위 작업 조회
     public ResponseEntity<?> getProductTasks(@PathVariable String productId) {
         return ResponseEntity.status(HttpStatus.OK).body(TaskListResponse.builder().tasks(taskRepository.findAll().stream()
