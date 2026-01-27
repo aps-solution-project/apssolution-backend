@@ -94,7 +94,22 @@ public class TaskController {
     @Operation(summary = "작업 전체 조회", description = "등록된 전체 작업 공정 목록 조회")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<?> getTasks() {
-        return ResponseEntity.status(HttpStatus.OK).body(TaskListResponse.builder().tasks(taskRepository.findAll()));
+        List<Task> allTasks = taskRepository.findAll();
+
+        // 엔티티 -> DTO 변환
+        List<TaskListResponse.TaskItem> taskItems = allTasks.stream()
+                .map(t -> TaskListResponse.TaskItem.builder()
+                        .id(t.getId())
+                        .productId(t.getProduct().getId())
+                        .categoryId(t.getToolCategory().getId())
+                        .seq(t.getSeq())
+                        .name(t.getName())
+                        .description(t.getDescription())
+                        .duration(t.getDuration())
+                        .build())
+                .toList();
+
+        return ResponseEntity.ok(TaskListResponse.builder().tasks(taskItems).build());
     }
 
 

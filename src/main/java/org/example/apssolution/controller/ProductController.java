@@ -280,9 +280,24 @@ public class ProductController {
             ))
     @GetMapping("/{productId}/tasks") // 품목 아이디로 하위 작업 조회
     public ResponseEntity<?> getProductTasks(@PathVariable String productId) {
-        return ResponseEntity.status(HttpStatus.OK).body(TaskListResponse.builder().tasks(taskRepository.findAll().stream()
+        // 1. 해당 품목의 작업을 조회 및 정렬
+        List<TaskListResponse.TaskItem> taskItems = taskRepository.findAll().stream()
                 .filter(t -> productId.equals(t.getProduct().getId()))
                 .sorted((a, b) -> Integer.compare(a.getSeq(), b.getSeq()))
-                .toList()).build());
+                // 2. ★ 핵심: Task 엔티티를 TaskItem DTO로 변환 ★
+                .map(t -> TaskListResponse.TaskItem.builder()
+                        .id(t.getId())
+                        .productId(t.getProduct().getId())
+                        .categoryId(t.getToolCategory().getId())
+                        .seq(t.getSeq())
+                        .name(t.getName())
+                        .description(t.getDescription())
+                        .duration(t.getDuration())
+                        .build())
+                .toList();
+
+        // 3. 변환된 DTO 리스트를 응답 바디에 담아 반환
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(TaskListResponse.builder().tasks(taskItems).build());
     }
 }
