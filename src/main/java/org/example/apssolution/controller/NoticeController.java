@@ -8,25 +8,37 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Notice;
+import org.example.apssolution.domain.enums.Role;
 import org.example.apssolution.dto.request.notice.CreateNoticeRequest;
 import org.example.apssolution.dto.request.notice.EditNoticeRequest;
 import org.example.apssolution.dto.response.notice.NoticeActionResponse;
 import org.example.apssolution.dto.response.notice.NoticeDetailResponse;
+import org.example.apssolution.dto.response.notice.NoticeListResponse;
 import org.example.apssolution.dto.response.notice.NoticeSearchResponse;
 import org.example.apssolution.repository.NoticeRepository;
 import org.example.apssolution.service.notice.CreateNoticeService;
 import org.example.apssolution.service.notice.DeleteNoticeService;
 import org.example.apssolution.service.notice.EditNoticeService;
 import org.example.apssolution.service.notice.SearchNoticeService;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 
@@ -77,33 +89,41 @@ public class NoticeController {
             summary = "공지사항 전체 조회",
             description = "시스템에 등록된 모든 공지사항 목록 조회함."
     )
-    @ApiResponse(responseCode = "200", description = "조회 성공",
+    @ApiResponse(
+            responseCode = "200",
+            description = "조회 성공",
             content = @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = NoticeActionResponse.class),
+                    schema = @Schema(implementation = NoticeListResponse.class),
                     examples = @ExampleObject(value = """
-                            [
-                              {
-                                "success": true,
-                                "noticeId": 101,
-                                "title": "[SCN-001] 1월 4주차 생산 작업 배포",
-                                "writerName": "관리자"
-                              },
-                              {
-                                "success": true,
-                                "noticeId": 102,
-                                "title": "설비 점검 일정 안내",
-                                "writerName": "설비팀장"
-                              }
-                            ]
+                            {
+                              "notices": [
+                                {
+                                  "id": 101,
+                                  "writer": {
+                                    "id": "admin01",
+                                    "name": "관리자",
+                                    "role": "ADMIN",
+                                    "profileImageUrl": "profile.png"
+                                  },
+                                  "title": "[SCN-001] 1월 4주차 생산 작업 배포",
+                                  "content": "작업 일정 공유드립니다.",
+                                  "createdAt": "2026-01-20T09:00:00"
+                                }
+                              ]
+                            }
                             """)
             )
     )
-    public List<NoticeActionResponse> getNotice() {
-        return noticeRepository.findAll().stream()
-                .map(notice -> NoticeActionResponse.builder().noticeId(notice.getId())
-                        .title(notice.getTitle()).writerName(notice.getWriter().getName())
-                        .success(true).build()).toList();
+    public ResponseEntity<?> getNotice() {
+        return ResponseEntity.status(HttpStatus.OK).body(
+                NoticeListResponse.builder()
+                        .notices(noticeRepository.findAll().stream()
+                                .filter(f -> f.getWriter().getRole() != Role.WORKER)
+                                .map(NoticeListResponse::from)
+                                .toList())
+                        .build()
+        );
     }
 
     @PatchMapping("/{noticeId}") // 공지사항 수정
@@ -160,8 +180,8 @@ public class NoticeController {
     @GetMapping("/{noticeId}")  // 공지사항 상세 조회
     @Operation(summary = "공지사항 상세 조회", description = "공지사항 ID 기준으로 상세 정보를 조회.")
     public ResponseEntity<NoticeDetailResponse> getNotice(@PathVariable Long noticeId) {
-        Notice notice = noticeRepository.findById(noticeId).orElseThrow();
-        return ResponseEntity.ok(NoticeDetailResponse.from(notice));
+        return ResponseEntity.ok(NoticeDetailResponse.from(noticeRepository.findById(noticeId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "공지사항을 찾을 수 없습니다."))));
     }
 
     @GetMapping("/search")   // 공지사항 검색
@@ -257,4 +277,79 @@ public class NoticeController {
 
         return ResponseEntity.ok(result);
     }
+
+
+    @Operation(
+            summary = "공지사항 첨부파일 다운로드",
+            description = "공지사항에 첨부된 파일을 다운로드함. path 파라미터에는 파일의 상대 경로를 전달해야 함."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "파일 다운로드 성공",
+                    content = @Content(
+                            mediaType = "application/octet-stream",
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "루트 경로를 벗어난 잘못된 파일 경로",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(example = """
+                                {
+                                  "status": 403,
+                                  "error": "Forbidden",
+                                  "message": "잘못된 파일 경로"
+                                }
+                                """)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "파일을 찾을 수 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(example = """
+                                {
+                                  "status": 404,
+                                  "error": "Not Found",
+                                  "message": "파일 없음"
+                                }
+                                """)
+                    )
+            )
+    })
+    @GetMapping("/files/download")
+    public ResponseEntity<?> downloadFile(@RequestParam String path) throws MalformedURLException {
+
+        // 1️⃣ 파일 저장 루트 고정
+        Path rootPath = Paths.get(System.getProperty("user.home"), "apssolution", "notices")
+                .toAbsolutePath()
+                .normalize();
+
+        // 2️⃣ 요청으로 들어온 상대경로 붙이기
+        Path targetPath = rootPath.resolve(path).normalize();
+
+        // 3️⃣ 루트 밖으로 탈출했는지 검사 (보안 핵심)
+        if (!targetPath.startsWith(rootPath)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "잘못된 파일 경로");
+        }
+
+        UrlResource resource = new UrlResource(targetPath.toUri());
+
+        if (!resource.exists() || !resource.isReadable()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일 없음");
+        }
+
+        String encodedName = UriUtils.encode(resource.getFilename(), StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                .body(resource);
+    }
+
+
 }

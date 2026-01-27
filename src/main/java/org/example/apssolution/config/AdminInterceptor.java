@@ -23,6 +23,11 @@ public class AdminInterceptor implements HandlerInterceptor {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
+        if(request.getMethod().equals("OPTIONS")){
+            return true;
+        }
+
+
         // 1. 인증 여부 확인
         if (account == null) {
             throw new ResponseStatusException(
@@ -35,7 +40,7 @@ public class AdminInterceptor implements HandlerInterceptor {
         //    - GET /api/accounts
         //    - GET /api/accounts/{accountId}
         if ("GET".equals(method) &&
-                ("/api/accounts".equals(path) || path.matches("^/api/accounts/[^/]+$"))) {
+                (path.startsWith("/api/accounts") || path.matches("^/api/accounts/[^/]+$"))) {
             return true;
         }
 
