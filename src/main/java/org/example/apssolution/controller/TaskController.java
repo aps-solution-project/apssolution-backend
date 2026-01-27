@@ -102,7 +102,7 @@ public class TaskController {
     @Operation(summary = "작업 상세 조회", description = "작업 ID 기준 단일 작업 조회")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "404", description = "작업 없음")})
-    public ResponseEntity<?> getTasks(@PathVariable("taskId") String taskId) {
+    public ResponseEntity<?> getTask(@PathVariable("taskId") String taskId) {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(TaskResponse.builder().task(taskRepository.findById(taskId).orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "작업 정보를 불러올 수 없습니다."))).build());

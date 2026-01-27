@@ -31,7 +31,7 @@ public class JWTVerifyFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest req) throws ServletException {
         String uri = req.getRequestURI();
         return req.getMethod().equals("OPTIONS") || uri.startsWith("/api/accounts/login")
-                || uri.startsWith("/swagger") || uri.startsWith("/v3/api-docs");
+                || uri.startsWith("/swagger") || uri.startsWith("/v3/api-docs") || uri.startsWith("/apssolution");
     }
 
     @Override
