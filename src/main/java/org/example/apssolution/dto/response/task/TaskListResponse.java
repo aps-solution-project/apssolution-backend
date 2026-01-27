@@ -21,7 +21,7 @@ public class TaskListResponse {
     public static class TaskItem {
         private String id;
         private String productId;
-        private String categoryId;
+        private String toolCategoryId;
         private Integer seq;
         private String name;
         private String description;

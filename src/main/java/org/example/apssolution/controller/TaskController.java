@@ -101,7 +101,7 @@ public class TaskController {
                 .map(t -> TaskListResponse.TaskItem.builder()
                         .id(t.getId())
                         .productId(t.getProduct().getId())
-                        .categoryId(t.getToolCategory().getId())
+                        .toolCategoryId(t.getToolCategory().getId())
                         .seq(t.getSeq())
                         .name(t.getName())
                         .description(t.getDescription())
