@@ -1,6 +1,9 @@
 package org.example.apssolution.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -10,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.example.apssolution.domain.entity.Task;
 import org.example.apssolution.dto.request.ParseXlsRequest;
+import org.example.apssolution.dto.request.task.TaskEditRequest;
 import org.example.apssolution.dto.request.task.UpsertTaskRequest;
 import org.example.apssolution.dto.response.task.ParseTaskXlsResponse;
 import org.example.apssolution.dto.response.task.TaskListResponse;
@@ -38,7 +42,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin
 @RequestMapping("/api/tasks")
-@SecurityRequirement(name="bearerAuth")
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Task", description = "작업 공정 관리 API")
 public class TaskController {
     final TaskRepository taskRepository;
@@ -102,7 +106,7 @@ public class TaskController {
     @Operation(summary = "작업 상세 조회", description = "작업 ID 기준 단일 작업 조회")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "404", description = "작업 없음")})
-    public ResponseEntity<?> getTasks(@PathVariable("taskId") String taskId) {
+    public ResponseEntity<?> getTask(@PathVariable("taskId") String taskId) {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(TaskResponse.builder().task(taskRepository.findById(taskId).orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "작업 정보를 불러올 수 없습니다."))).build());
@@ -158,6 +162,84 @@ public class TaskController {
         }
 
         return ResponseEntity.status(HttpStatus.OK).body(resp);
+    }
+
+
+    @Operation(
+            summary = "작업 단건 수정",
+            description = "작업 ID 기준으로 작업 정보 부분 수정. 요청 바디에 포함된 값만 변경."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "작업 수정 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TaskResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "task": {
+                                        "id": "TASK-001",
+                                        "name": "반죽 작업",
+                                        "description": "1차 반죽 공정",
+                                        "seq": 1,
+                                        "duration": 45,
+                                        "product": {
+                                                    "id": "BRD-01",
+                                                    "name": "바게트",
+                                                    "description": "겉은 바삭하고 속은 촉촉한 프랑스 전통 빵",
+                                                    "active": true,
+                                                    "createdAt": "2026-01-10T04:00:00"
+                                                  },
+                                        "toolCategory": {
+                                          "id": "TOOL-01",
+                                          "name": "반죽기"
+                                        }
+                                      }
+                                    }
+                                    """)
+                    )
+            ),
+            @ApiResponse(responseCode = "404", description = "작업 / 품목 / 도구 카테고리를 찾을 수 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-01-27T15:10:00",
+                                      "status": 404,
+                                      "error": "Not Found",
+                                      "message": "작업을 찾을 수 없습니다.",
+                                      "path": "/api/tasks/TASK-999"
+                                    }
+                                    """)
+                    )
+            )
+    })
+    @PatchMapping("/{taskId}")
+    public ResponseEntity<?> editTask(@PathVariable("taskId") String taskId,
+                                      @RequestBody TaskEditRequest ter) {
+        Task task = taskRepository.findById(taskId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "작업을 찾을 수 없습니다."));
+        if (ter.getProductId() != null) {
+            task.setProduct(productRepository.findById(ter.getProductId()).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "품목을 찾을 수 없습니다.")));
+        }
+        if (ter.getToolCategoryId() != null) {
+            task.setToolCategory(toolCategoryRepository.findById(ter.getToolCategoryId()).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "도구 카테고리를 찾을 수 없습니다.")));
+        }
+        if (ter.getSeq() != null) {
+            task.setSeq(ter.getSeq());
+        }
+        if (ter.getName() != null) {
+            task.setName(ter.getName());
+        }
+        if (ter.getDescription() != null) {
+            task.setDescription(ter.getDescription());
+        }
+        if (ter.getDuration() != null) {
+            task.setDuration(ter.getDuration());
+        }
+        taskRepository.save(task);
+        return ResponseEntity.status(HttpStatus.OK).body(TaskResponse.builder().task(task).build());
     }
 
 }
