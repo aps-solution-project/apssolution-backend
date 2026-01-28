@@ -46,7 +46,7 @@ public class AccountController {
     private final GetAccountService getAccountService;
 
     @PostMapping    // 사원 등록
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "사원 등록", description = "신규 사원 계정을 생성하는 API. 사원번호는 시스템에서 자동 생성, " +
             "임시 비밀번호는 랜덤 값으로 생성 후 이메일로 발송처리")
     @ApiResponses({
@@ -104,7 +104,7 @@ public class AccountController {
     }
 
     @PatchMapping("/{accountId}") // 관리자 사원 정보 수정
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "관리자용 사원 정보 수정", description = "관리자가 특정 사원의 정보를 수정하는 API. 일반 사원은 접근 권한 없음.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "사원 정보 수정 성공"),
@@ -127,7 +127,7 @@ public class AccountController {
     }
 
     @GetMapping // 전체 사원 조회
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "전체 사원 조회", description = "시스템에 등록된 모든 사원 정보 조회. 퇴사 여부를 포함한 사원 목록 반환.")
     @ApiResponses({
             @ApiResponse(
@@ -150,7 +150,7 @@ public class AccountController {
     }
 
     @GetMapping("/{accountId}") // 사원 상세 조회
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "사원 상세 조회", description = "사원번호 기준으로 단일 사원 상세 정보를 조회.")
     @ApiResponses({
             @ApiResponse(
@@ -167,7 +167,7 @@ public class AccountController {
     }
 
     @PatchMapping("/{accountId}/edit") // 본인 프로필 수정
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "사원용 정보 수정", description = "로그인한 사원이 본인 프로필 정보를 수정하는 API. 프로필 이미지를 포함한 정보 수정 가능")
     @ApiResponses({
             @ApiResponse(
@@ -181,16 +181,19 @@ public class AccountController {
     public ResponseEntity<?> editAccount(@PathVariable String accountId,
                                          @ModelAttribute EditAccountRequest request,
                                          @RequestAttribute Account account) throws IOException {
-        Path uplodadPath = Path.of(System.getProperty("user.home"), "apssolution", "profile", accountId);
-        Files.createDirectories(uplodadPath);
+        if (request.getProfileImage() != null) {
+            Path uplodadPath = Path.of(System.getProperty("user.home"), "apssolution", "profile", accountId);
+            Files.createDirectories(uplodadPath);
 
-        String uuid = UUID.randomUUID().toString().replaceAll("-", "");
-        Path filePath = uplodadPath.resolve(uuid);
-        request.getProfileImage().transferTo(filePath.toFile());
+            String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+            Path filePath = uplodadPath.resolve(uuid);
+            request.getProfileImage().transferTo(filePath.toFile());
 
-        String imageUri = "/apssolution/profile/" + accountId + "/" + uuid;
+            String imageUri = "/apssolution/profile/" + accountId + "/" + uuid;
 
-        account.setProfileImageUrl(imageUri);
+            account.setProfileImageUrl(imageUri);
+        }
+        account.setEmail(request.getEmail());
         accountRepository.save(account);
 
         return ResponseEntity.status(HttpStatus.OK)
@@ -201,7 +204,7 @@ public class AccountController {
     }
 
     @PatchMapping("/{accountId}/password")    // 비밀번호 변경
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "사원용 비밀번호 변경", description = "로그인한 사원이 본인 비밀번호 변경. 본인 계정이 아닌 경우 접근 불가.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "변경 성공"),
@@ -230,7 +233,7 @@ public class AccountController {
     }
 
     @DeleteMapping("/{accountId}/resign") // 사원 퇴직 처리
-    @SecurityRequirement(name="bearerAuth")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "퇴직 사원 등록", description = "특정 사원을 퇴직 상태로 변경. 관리자 권한 필요.")
     @ApiResponses({
             @ApiResponse(
