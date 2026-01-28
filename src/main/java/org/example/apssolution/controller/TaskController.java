@@ -98,7 +98,22 @@ public class TaskController {
     @Operation(summary = "작업 전체 조회", description = "등록된 전체 작업 공정 목록 조회")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<?> getTasks() {
-        return ResponseEntity.status(HttpStatus.OK).body(TaskListResponse.builder().tasks(taskRepository.findAll()));
+        List<Task> allTasks = taskRepository.findAll();
+
+        // 엔티티 -> DTO 변환
+        List<TaskListResponse.TaskItem> taskItems = allTasks.stream()
+                .map(t -> TaskListResponse.TaskItem.builder()
+                        .id(t.getId())
+                        .productId(t.getProduct().getId())
+                        .toolCategoryId(t.getToolCategory().getId())
+                        .seq(t.getSeq())
+                        .name(t.getName())
+                        .description(t.getDescription())
+                        .duration(t.getDuration())
+                        .build())
+                .toList();
+
+        return ResponseEntity.ok(TaskListResponse.builder().tasks(taskItems).build());
     }
 
 
@@ -113,25 +128,34 @@ public class TaskController {
     }
 
 
-    @PostMapping(value = "/xls/parse", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) // 작업 엑셀파일 파싱
+    @PostMapping(value = "/xls/parse", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "작업 엑셀 파싱", description = "엑셀 파일 업로드 후 작업 공정 데이터 파싱")
-    @ApiResponses({@ApiResponse(responseCode = "200", description = "엑셀 파싱 성공"),
-            @ApiResponse(responseCode = "400", description = "엑셀 형식 오류 또는 파일 읽기 실패")})
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "엑셀 파싱 성공"),
+            @ApiResponse(responseCode = "400", description = "엑셀 형식 오류 또는 파일 읽기 실패"),
+            @ApiResponse(responseCode = "404", description = "품목 또는 카테고리 없음")
+    })
     public ResponseEntity<?> parseTaskXls(@ModelAttribute ParseXlsRequest pxr) {
-        ParseTaskXlsResponse resp = new ParseTaskXlsResponse();
+
         try (InputStream is = pxr.file().getInputStream();
              Workbook workbook = WorkbookFactory.create(is)) {
 
             Sheet sheet = workbook.getSheetAt(0);
-
             Iterator<Row> iterator = sheet.rowIterator();
-            if (!iterator.hasNext()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "엑셀 파일이 비어 있습니다");
-            }
-            iterator.next();
-            DataFormatter formatter = new DataFormatter(); // 무조건 다 String 으로 받게 해주는 포멧터
 
+            if (!iterator.hasNext()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "엑셀 파일이 비어 있습니다."
+                );
+            }
+
+            // 헤더 스킵
+            iterator.next();
+
+            DataFormatter formatter = new DataFormatter();
             List<Task> tasks = new ArrayList<>();
+
             while (iterator.hasNext()) {
                 Row row = iterator.next();
 
@@ -146,22 +170,49 @@ public class TaskController {
                 tasks.add(Task.builder()
                         .id(taskId)
                         .product(productRepository.findById(productId).orElseThrow(() ->
-                                new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 품목 정보가 존재합니다.")))
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "알 수 없는 품목 정보가 존재합니다."
+                                )))
                         .toolCategory(toolCategoryRepository.findById(categoryId).orElseThrow(() ->
-                                new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 카테고리가 존재합니다.")))
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "알 수 없는 카테고리가 존재합니다."
+                                )))
                         .seq(seq)
                         .name(name)
                         .description(description)
                         .duration(duration)
                         .build());
             }
-            resp.setTasks(tasks.stream().sorted(Comparator.comparingInt(Task::getSeq)).toList());
+
+            List<ParseTaskXlsResponse.ParseTaskItem> items =
+                    tasks.stream()
+                            .sorted(Comparator.comparingInt(Task::getSeq))
+                            .map(t -> ParseTaskXlsResponse.ParseTaskItem.builder()
+                                    .id(t.getId())
+                                    .productId(t.getProduct().getId())
+                                    .toolCategoryId(t.getToolCategory().getId())
+                                    .seq(t.getSeq())
+                                    .name(t.getName())
+                                    .description(t.getDescription())
+                                    .duration(t.getDuration())
+                                    .build())
+                            .toList();
+
+            return ResponseEntity.ok(
+                    ParseTaskXlsResponse.builder()
+                            .tasks(items)
+                            .build()
+            );
+
         } catch (IOException e) {
             e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "엑셀 파일을 읽을 수 없습니다");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "엑셀 파일을 읽을 수 없습니다."
+            );
         }
-
-        return ResponseEntity.status(HttpStatus.OK).body(resp);
     }
 
 

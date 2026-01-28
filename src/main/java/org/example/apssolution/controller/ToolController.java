@@ -48,7 +48,7 @@ public class ToolController {
 
     @PostMapping("/category")// 카테고리 추가
     @Operation(summary = "카테고리 생성", description = "신규 도구 카테고리 생성")
-    @ApiResponse(responseCode = "200", description = "카테고리 생성 성공",
+    @ApiResponse(responseCode = "201", description = "카테고리 생성 성공",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = CreateCategoryResponse.class),
@@ -85,8 +85,19 @@ public class ToolController {
     @DeleteMapping("/category/{categoryId}") // 카테고리 삭제
     @Operation(summary = "도구 카테고리 삭제", description = "카테고리 ID 기준으로 도구 카테고리 삭제")
     @Parameter(name = "categoryId", description = "카테고리 ID", required = true)
-    @ApiResponse(responseCode = "204", description = "삭제 완료")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "삭제 완료"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 카테고리"),
+            @ApiResponse(responseCode = "409", description = "카테고리에 속한 도구 존재")
+    })
     public ResponseEntity<?> deleteCategory(@PathVariable("categoryId") String categoryId) {
+        if (!toolCategoryRepository.existsById(categoryId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "존재하지 않는 카테고리입니다"
+            );
+        }
+
         toolCategoryRepository.deleteById(categoryId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -233,11 +244,13 @@ public class ToolController {
                 ToolCategory category = categories.stream()
                         .filter(c -> c.getId().equals(categoryId))
                         .findFirst()
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
+                        .orElseThrow(() -> {
+                            System.out.println(categoryId);
+                               return new ResponseStatusException(
                                         HttpStatus.NOT_FOUND,
                                         "알 수 없는 카테고리가 존재합니다."
-                                )
+                                );
+                                }
                         );
 
                 tools.add(Tool.builder()

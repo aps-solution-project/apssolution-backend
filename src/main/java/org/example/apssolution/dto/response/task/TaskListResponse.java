@@ -1,8 +1,6 @@
 package org.example.apssolution.dto.response.task;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.example.apssolution.domain.entity.Task;
 
 import java.util.List;
@@ -10,6 +8,25 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TaskListResponse {
-    List<Task> tasks;
+    private List<TaskItem> tasks;
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TaskItem {
+        private String id;
+        private String productId;
+        private String toolCategoryId;
+        private Integer seq;
+        private String name;
+        private String description;
+        private Integer duration;
+
+    }
+
 }
