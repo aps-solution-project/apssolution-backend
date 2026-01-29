@@ -125,7 +125,10 @@ public class NoticeController {
                 NoticeListResponse.builder()
                         .notices(noticeRepository.findAll().stream()
                                 .filter(f -> f.getWriter().getRole() != Role.WORKER)
-                                .map(NoticeListResponse::from)
+                                .map(n -> {
+                                    int count = noticeCommentRepository.countByNoticeId(n.getId());
+                                    return NoticeListResponse.from(n, count);
+                                })
                                 .toList())
                         .build()
         );
@@ -436,11 +439,27 @@ public class NoticeController {
         if (account.getRole() != Role.WORKER) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "잘못된 접근입니다.");
         }
+
+        List<NoticeListResponse.NoticeInfo> summaries = noticeRepository.findAll().stream()
+                .filter(f -> f.getWriter().getRole() == Role.WORKER)
+                .map(notice -> {
+                    // 각 게시글의 댓글 개수 조회
+                    int commentCount = noticeCommentRepository.countByNoticeId(notice.getId());
+
+                    // 개수를 포함하여 DTO 생성 (NoticeListResponse.from 메서드에 인자 추가 필요)
+                    return NoticeListResponse.from(notice, commentCount);
+                })
+                .toList();
+
         return ResponseEntity.status(HttpStatus.OK).body(
                 NoticeListResponse.builder()
                         .notices(noticeRepository.findAll().stream()
                                 .filter(f -> f.getWriter().getRole() == Role.WORKER)
-                                .map(NoticeListResponse::from)
+                                .map(n -> {
+                                    // ✅ 각 공지사항마다 댓글 개수를 카운트
+                                    int count = noticeCommentRepository.countByNoticeId(n.getId());
+                                    return NoticeListResponse.from(n, count); // ✅ 수정된 from 호출
+                                })
                                 .toList())
                         .build()
         );
@@ -497,6 +516,17 @@ public class NoticeController {
         }
         return ResponseEntity.ok(NoticeDetailResponse.from(noticeRepository.findById(noticeId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "공지사항을 찾을 수 없습니다."))));
+    }
+
+    @GetMapping("/{noticeId}/comments")     // 게시글 댓글 조회
+    @Operation(summary = "게시글 댓글 목록 조회")
+    public ResponseEntity<?> getComments(@PathVariable Long noticeId) {
+        List<NoticeComment> comments = noticeCommentRepository.findByNoticeIdOrderByCreatedAtAsc(noticeId);
+
+        // NoticeCommentResponse.Comment 리스트로 변환해서 반환
+        return ResponseEntity.ok(comments.stream()
+                .map(NoticeCommentResponse::from)
+                .toList());
     }
 
 

@@ -92,13 +92,12 @@ public class AccountController {
         }
 
         String token = jwtProviderService.createToken(account);
+        GetAccountDetailResponse accountDetail = GetAccountDetailResponse.from(account);
         LoginResponse response = LoginResponse.builder()
                 .success(true)
                 .message("로그인 성공")
-                .accountId(account.getId())
-                .accountName(account.getName())
                 .token(token)
-                .role(account.getRole())
+                .account(accountDetail)
                 .build();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
