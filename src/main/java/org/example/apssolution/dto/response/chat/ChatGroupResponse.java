@@ -1,16 +1,11 @@
 package org.example.apssolution.dto.response.chat;
 
-import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Chat;
-import org.example.apssolution.domain.entity.ChatMember;
 import org.example.apssolution.domain.enums.MessageType;
-import org.example.apssolution.domain.enums.Role;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,25 +13,13 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class ChatDirectResponse {
+public class ChatGroupResponse {
     private String chatRoomId;
     private String chatRoomName;
     private String ownerId;
     private LocalDateTime createdAt;
     private String signature;
-    private OtherUser otherUser;
     private List<Message> messages;
-
-    @Getter
-    @Setter
-    @Builder
-    public static class OtherUser{
-        private String userId;
-        private String name;
-        private Role role;
-        private String email;
-        private String profileImageUrl;
-    }
 
     @Getter
     @Setter
@@ -61,20 +44,21 @@ public class ChatDirectResponse {
         private String fileType;
     }
 
-    public static ChatDirectResponse from(Chat chat, Account account, Account target) {
-        return ChatDirectResponse.builder()
+    public static ChatGroupResponse from(Chat chat, Account account) {
+        return ChatGroupResponse.builder()
                 .chatRoomId(chat.getId())
-                .chatRoomName(target.getName())
+                .chatRoomName(chat.getRoomName() != null ? chat.getRoomName() : String.join(", ", chat.getChatMembers().stream()
+                        .filter(m -> {
+                            if(m.getAccount() != null){
+                                return !m.getAccount().getId().equals(account.getId());
+                            }else{
+                                return false;
+                            }
+                        })
+                        .map(m -> m.getAccount().getName()).toList()))
                 .ownerId(chat.getOwner().getId())
                 .createdAt(chat.getCreatedAt())
                 .signature(chat.getSignature())
-                .otherUser(OtherUser.builder()
-                        .userId(target.getId())
-                        .name(target.getName())
-                        .email(target.getEmail())
-                        .role(target.getRole())
-                        .profileImageUrl(target.getProfileImageUrl())
-                        .build())
                 .messages(chat.getChatMessages() == null ? List.of() : chat.getChatMessages().stream()
                         .map(m ->
                                 Message.builder()

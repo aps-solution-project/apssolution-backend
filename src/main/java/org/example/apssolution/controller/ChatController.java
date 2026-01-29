@@ -4,8 +4,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Chat;
+import org.example.apssolution.domain.entity.ChatMember;
 import org.example.apssolution.dto.request.chat.CreateGroupChatRequest;
 import org.example.apssolution.dto.response.chat.ChatDirectResponse;
+import org.example.apssolution.dto.response.chat.ChatGroupResponse;
 import org.example.apssolution.repository.AccountRepository;
 import org.example.apssolution.repository.ChatAttachmentRepository;
 import org.example.apssolution.repository.ChatMemberRepository;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -28,7 +31,6 @@ public class ChatController {
     final AccountRepository accountRepository;
     final ChatRepository chatRepository;
     final ChatMemberRepository chatMemberRepository;
-    final ChatMemberRepository chatMemberMemberRepository;
     final ChatAttachmentRepository chatAttachmentRepository;
 
 
@@ -43,7 +45,10 @@ public class ChatController {
                 .map(Account::getId).toList());
 
         Chat targetChat = chatRepository.findBySignature(signature);
-        // 수정중
+
+        if(targetChat != null){
+            return ResponseEntity.status(HttpStatus.CREATED).body(ChatGroupResponse.from(targetChat, account));
+        }
 
         return null;
     }
@@ -54,9 +59,11 @@ public class ChatController {
         String signature = String.join(":", Stream.of(targetId, account.getId()).sorted().toList());
 
         Chat targetChat = chatRepository.findBySignature(signature);
+        Account target = accountRepository.findById(targetId).orElseThrow(()->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "상대 사용자를 찾을 수 없습니다."));
 
         if(targetChat != null) {
-            return ResponseEntity.status(HttpStatus.OK).body(ChatDirectResponse.from(targetChat));
+            return ResponseEntity.status(HttpStatus.OK).body(ChatDirectResponse.from(targetChat, account, target));
         }
 
         Chat chat = Chat.builder()
@@ -65,7 +72,19 @@ public class ChatController {
                 .build();
         chatRepository.save(chat);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ChatDirectResponse.from(chat));
+        List<ChatMember> members = List.of(
+                ChatMember.builder()
+                .chat(chat)
+                .account(account)
+                .build(),
+                ChatMember.builder()
+                .chat(chat)
+                .account(target)
+                .build());
+
+        chatMemberRepository.saveAll(members);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ChatDirectResponse.from(chat, account, target));
     }
 
 

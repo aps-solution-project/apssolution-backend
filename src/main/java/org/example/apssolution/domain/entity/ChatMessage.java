@@ -5,6 +5,7 @@ import lombok.*;
 import org.example.apssolution.domain.enums.MessageType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -24,6 +25,9 @@ public class ChatMessage {
     private LocalDateTime talkedAt;
     @Enumerated(EnumType.STRING)
     private MessageType type;
+
+    @OneToMany(mappedBy = "message")
+    private List<ChatAttachment> attachments;
 
     @PrePersist
     public void prePersist() {
