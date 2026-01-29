@@ -1,6 +1,7 @@
 package org.example.apssolution.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,15 +13,19 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.example.apssolution.domain.entity.Product;
+import org.example.apssolution.domain.entity.Task;
 import org.example.apssolution.dto.request.ParseXlsRequest;
 import org.example.apssolution.dto.request.product.UpsertProductRequest;
+import org.example.apssolution.dto.request.task.UpsertTaskRequest;
 import org.example.apssolution.dto.response.product.ParseProductXlsResponse;
 import org.example.apssolution.dto.response.product.ProductListResponse;
 import org.example.apssolution.dto.response.product.ProductResponse;
 import org.example.apssolution.dto.response.product.UpsertProductResponse;
 import org.example.apssolution.dto.response.task.TaskListResponse;
+import org.example.apssolution.dto.response.task.UpsertTaskResponse;
 import org.example.apssolution.repository.ProductRepository;
 import org.example.apssolution.repository.TaskRepository;
+import org.example.apssolution.repository.ToolCategoryRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,23 +50,65 @@ import java.util.List;
 public class ProductController {
     final ProductRepository productRepository;
     final TaskRepository taskRepository;
+    final ToolCategoryRepository toolCategoryRepository;
 
     @Operation(
             summary = "품목 벌크 저장/수정",
-            description = "전달된 품목 목록 기준 기존 데이터 동기화 처리. 미존재 품목 삭제, 기존 품목 수정, 신규 품목 생성 수행"
+            description = """
+                전달된 품목 목록 기준 기존 데이터 동기화 처리.
+                
+                - 요청에 포함된 품목은 수정 또는 생성
+                - 요청에 포함되지 않은 기존 품목은 삭제
+                """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "저장 성공",
-                    content = @Content(mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "created": 2,
-                                      "updated": 3,
-                                      "deleted": 1
-                                    }
-                                    """))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "저장 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UpsertProductResponse.class),
+                            examples = @ExampleObject(
+                                    name = "처리 결과 예시",
+                                    value = """
+                                        {
+                                          "created": 2,
+                                          "updated": 3,
+                                          "deleted": 1
+                                        }
+                                        """
+                            )
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "요청 값 검증 실패")
     })
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "동기화할 품목 목록",
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = UpsertProductRequest.class),
+                    examples = @ExampleObject(
+                            name = "제빵 품목 예시",
+                            value = """
+                                {
+                                  "products": [
+                                    {
+                                      "productId": "BREAD_BAGUETTE",
+                                      "name": "바게트",
+                                      "description": "프랑스식 하드 브레드"
+                                    },
+                                    {
+                                      "productId": "BREAD_CROISSANT",
+                                      "name": "크루아상",
+                                      "description": "버터 레이어 페이스트리"
+                                    }
+                                  ]
+                                }
+                                """
+                    )
+            )
+    )
     @Transactional
     @PutMapping // 품목 벌크 수정
     public ResponseEntity<?> upsertProducts(@RequestBody @Valid UpsertProductRequest upr,
@@ -101,6 +148,133 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).
                 body(UpsertProductResponse.builder()
                         .created(created).deleted(delete).updated(update).build());
+    }
+
+
+    @Operation(
+            summary = "품목 작업 공정 벌크 수정",
+            description = """
+                    특정 품목에 속한 작업 공정을 요청 데이터 기준으로 일괄 수정함.
+                    
+                    - 요청에 포함된 기존 작업은 수정 처리
+                    - taskId가 없는 항목은 신규 생성
+                    - 요청에 포함되지 않은 기존 작업은 삭제
+                    - 다른 품목에 속한 작업을 수정하려는 경우 오류 발생
+                    """
+    )
+    @ApiResponses(value = {
+
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "작업 공정 벌크 수정 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UpsertTaskResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "요청 값 검증 실패 (필수값 누락, 형식 오류 등)"
+            ),
+
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "존재하지 않는 품목 또는 작업 또는 카테고리"
+            ),
+
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "다른 품목에 속한 작업을 수정하려는 경우 충돌 발생"
+            )
+    })
+    @Transactional
+    @PatchMapping("/{productId}/tasks")
+    public ResponseEntity<?> upsertProductTasks(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+                                                        description = "품목의 작업 공정을 일괄 생성 또는 수정합니다.",
+                                                        required = true,
+                                                        content = @Content(schema = @Schema(implementation = UpsertTaskRequest.class))
+                                                ) @RequestBody @Valid UpsertTaskRequest utr,
+                                                BindingResult bindingResult,
+                                                @Parameter(
+                                                        name = "productId",
+                                                        description = "작업 공정을 수정할 대상 품목 ID",
+                                                        required = true,
+                                                        example = "PRODUCT_A"
+                                                )
+                                                @PathVariable String productId) {
+        if (bindingResult.hasErrors()) {
+            FieldError fe = bindingResult.getFieldError();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, fe.getDefaultMessage());
+        }
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 품목입니다."));
+
+        List<Task> myProductTasks = taskRepository.findByProduct(product);
+
+        List<String> requestTaskIds = utr.getTasks().stream()
+                .map(UpsertTaskRequest.Item::getTaskId)
+                .toList();
+
+        if (!requestTaskIds.isEmpty()) {
+            List<Task> foundTasks = taskRepository.findAllById(requestTaskIds);
+
+            if (foundTasks.size() != requestTaskIds.size()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 작업이 포함되어 있습니다.");
+            }
+
+            for (Task task : foundTasks) {
+                if (!task.getProduct().getId().equals(productId)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "다른 품목의 작업은 수정할 수 없습니다.");
+                }
+            }
+        }
+
+        List<Task> notContainsTasks = myProductTasks.stream()
+                .filter(t -> requestTaskIds.stream().noneMatch(id -> id.equals(t.getId())))
+                .toList();
+
+        List<Task> upsertTasks = new ArrayList<>();
+
+        for (UpsertTaskRequest.Item item : utr.getTasks()) {
+
+            Task task;
+
+            if (item.getTaskId() != null) {
+                task = taskRepository.findById(item.getTaskId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 작업입니다."));
+            } else {
+                task = new Task();
+                task.setProduct(product);
+            }
+
+            task.setName(item.getName());
+            task.setDescription(item.getDescription());
+            task.setSeq(item.getSeq());
+            task.setDuration(item.getDuration());
+
+            task.setToolCategory(
+                    toolCategoryRepository.findById(item.getCategoryId())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 카테고리입니다."))
+            );
+
+            upsertTasks.add(task);
+        }
+
+        taskRepository.deleteAll(notContainsTasks);
+        taskRepository.saveAll(upsertTasks);
+
+        int delete = notContainsTasks.size();
+        int update = myProductTasks.size() - delete;
+        int created = upsertTasks.size() - update;
+
+        return ResponseEntity.ok(
+                UpsertTaskResponse.builder()
+                        .created(created)
+                        .deleted(delete)
+                        .updated(update)
+                        .build()
+        );
     }
 
 
@@ -188,7 +362,7 @@ public class ProductController {
                                           "name": "식빵",
                                           "description": "부드러운 기본 식빵",
                                           "active": false,
-                                          "createdAt": null
+                                          "createdAt": 2026-01-25T09:30:00
                                         }
                                       ]
                                     }

@@ -130,7 +130,7 @@ public class ToolController {
 
     @Transactional
     @PutMapping //툴 벌크 수정
-    @Operation(summary = "도구 벌크 동기화", description = "전달된 도구 목록 기준으로 데이터를 동기화. 목록에 없는 도구는 삭제, " +
+    @Operation(summary = "도구 벌크 수정", description = "전달된 도구 목록 기준으로 데이터를 동기화. 목록에 없는 도구는 삭제, " +
             "존재하는 도구는 수정, 신규 도구는 생성")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "동기화 완료",
             content = @Content(
