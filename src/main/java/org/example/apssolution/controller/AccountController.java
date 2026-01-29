@@ -69,13 +69,10 @@ public class AccountController {
     }
 
     @PostMapping("/login")  // 로그인
-    @Operation(summary = "사원 로그인", description = "사원 계정 로그인을 처리하는 API. 사원번호와 비밀번호를 검증한 후 JWT 토큰을 발급. 퇴사 처리된 계정은 로그인할 수 없다.")
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "로그인 성공",
-                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
-            ),
+    @Operation(summary = "로그인", description = "사원번호와 비밀번호로 로그인을 진행합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))),
             @ApiResponse(responseCode = "401", description = "비밀번호 불일치"),
             @ApiResponse(responseCode = "404", description = "사원번호 없음"),
             @ApiResponse(responseCode = "409", description = "퇴사 처리된 계정")
@@ -92,13 +89,12 @@ public class AccountController {
         }
 
         String token = jwtProviderService.createToken(account);
+        GetAccountDetailResponse accountDetail = GetAccountDetailResponse.from(account);
         LoginResponse response = LoginResponse.builder()
                 .success(true)
                 .message("로그인 성공")
-                .accountId(account.getId())
-                .accountName(account.getName())
                 .token(token)
-                .role(account.getRole())
+                .account(accountDetail)
                 .build();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }

@@ -23,12 +23,6 @@ public class LoginResponse {
     @Schema(description = "JWT 인증 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     private String token;
 
-    @Schema(description = "사원번호", example = "P26762991")
-    private String accountId;
-
-    @Schema(description = "사원명", example = "홍길동")
-    private String accountName;
-
-    @Schema(description = "권한", example = "ADMIN")
-    private Role role;
+    @Schema(description = "로그인한 사원의 상세 정보")
+    private GetAccountDetailResponse account;
 }
