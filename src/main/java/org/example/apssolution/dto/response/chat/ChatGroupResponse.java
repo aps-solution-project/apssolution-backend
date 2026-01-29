@@ -5,9 +5,12 @@ import lombok.Getter;
 import lombok.Setter;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Chat;
+import org.example.apssolution.domain.entity.ChatMessage;
 import org.example.apssolution.domain.enums.MessageType;
+import org.example.apssolution.domain.enums.Role;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Getter
@@ -19,7 +22,19 @@ public class ChatGroupResponse {
     private String ownerId;
     private LocalDateTime createdAt;
     private String signature;
+    private List<OtherUser> otherUsers;
     private List<Message> messages;
+
+    @Getter
+    @Setter
+    @Builder
+    public static class OtherUser{
+        private String userId;
+        private String name;
+        private Role role;
+        private String email;
+        private String profileImageUrl;
+    }
 
     @Getter
     @Setter
@@ -44,21 +59,21 @@ public class ChatGroupResponse {
         private String fileType;
     }
 
-    public static ChatGroupResponse from(Chat chat, Account account) {
+    public static ChatGroupResponse from(Chat chat, Account account, List<Account> members) {
         return ChatGroupResponse.builder()
                 .chatRoomId(chat.getId())
-                .chatRoomName(chat.getRoomName() != null ? chat.getRoomName() : String.join(", ", chat.getChatMembers().stream()
-                        .filter(m -> {
-                            if(m.getAccount() != null){
-                                return !m.getAccount().getId().equals(account.getId());
-                            }else{
-                                return false;
-                            }
-                        })
-                        .map(m -> m.getAccount().getName()).toList()))
-                .ownerId(chat.getOwner().getId())
+                .chatRoomName(chat.getRoomName() != null ? chat.getRoomName() : String.join(", ", members.stream().map(Account::getId).toList()))
+                .ownerId(account.getId())
                 .createdAt(chat.getCreatedAt())
                 .signature(chat.getSignature())
+                .otherUsers(members.stream()
+                        .map(a -> OtherUser.builder()
+                                .userId(a.getId())
+                                .name(a.getName())
+                                .email(a.getEmail())
+                                .role(a.getRole())
+                                .profileImageUrl(a.getProfileImageUrl())
+                                .build()).toList())
                 .messages(chat.getChatMessages() == null ? List.of() : chat.getChatMessages().stream()
                         .map(m ->
                                 Message.builder()
@@ -78,7 +93,8 @@ public class ChatGroupResponse {
                                                                 .build()
                                                 ).toList())
                                         .build()
-                        ).toList())
+                        ).sorted(Comparator.comparing(Message::getTalkedAt))
+                        .toList())
                 .build();
     }
 }
