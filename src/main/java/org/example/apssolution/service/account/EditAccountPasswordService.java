@@ -17,8 +17,7 @@ public class EditAccountPasswordService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     @Transactional
-    public ServiceResultResponse editPw(String accountId, EditAccountPasswordRequest request) {
-        Account account = accountRepository.findById(accountId).orElse(null);
+    public ServiceResultResponse editPw(Account account, EditAccountPasswordRequest request) {
 
         if (account == null) {
             return new ServiceResultResponse(false, "존재하지 않는 계정입니다.");
@@ -26,7 +25,7 @@ public class EditAccountPasswordService {
         if (account.getResignedAt() != null) {
             return new ServiceResultResponse(false, "퇴사한 계정은 수정할 수 없습니다.");
         }
-        if (passwordEncoder.matches(request.getOldPw(), account.getPw())) {
+        if (!passwordEncoder.matches(request.getOldPw(), account.getPw())) {
             return new ServiceResultResponse(false, "기존 비밀번호가 일치하지 않습니다.");
         }
         if (passwordEncoder.matches(request.getNewPw(), account.getPw())) {
@@ -35,11 +34,8 @@ public class EditAccountPasswordService {
         if (!request.getNewPw().equals(request.getNewPwConfirm())) {
             return new ServiceResultResponse(false, "새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
         }
-
-
-        if (request.getNewPw() != null) {
-            account.setPw(passwordEncoder.encode(request.getNewPw()));
-        }
+        account.setPw(passwordEncoder.encode(request.getNewPw()));
+        accountRepository.save(account);
         return new ServiceResultResponse(true, "비밀번호가 변경되었습니다.");
     }
 

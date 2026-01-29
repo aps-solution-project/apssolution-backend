@@ -1,6 +1,7 @@
 package org.example.apssolution.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
+import org.example.apssolution.domain.entity.Product;
 import org.example.apssolution.domain.entity.Task;
 import org.example.apssolution.dto.request.ParseXlsRequest;
 import org.example.apssolution.dto.request.task.TaskEditRequest;
@@ -51,12 +53,41 @@ public class TaskController {
 
     @Transactional
     @PutMapping // 작업 공정 벌크 수정
-    @Operation(summary = "작업 공정 벌크 수정", description = "전달된 작업 목록 기준으로 데이터를 동기화/ 없는 작업은 삭제, 존재하는 작업은 수정, 신규 작업은 생성")
-    @ApiResponses({@ApiResponse(responseCode = "200", description = "작업 동기화 완료"),
-            @ApiResponse(responseCode = "400", description = "요청 데이터 검증 실패"),
-            @ApiResponse(responseCode = "404", description = "품목 또는 카테고리 없음")})
-    public ResponseEntity<?> upsertTasks(@RequestBody @Valid UpsertTaskRequest utr,
-                                         BindingResult bindingResult) {
+    @Operation(
+            summary = "해당 품목의 하위 작업 공정 벌크 수정",
+            description = """
+                    전달된 작업 목록을 기준으로 전체 작업 데이터를 수정
+                    
+                    - 요청에 포함된 작업은 생성 또는 수정
+                    - 요청에 포함되지 않은 기존 작업은 삭제
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "작업 공정 동기화 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UpsertTaskResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "요청 데이터 검증 실패 (필수값 누락, 형식 오류 등)"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "존재하지 않는 품목 또는 카테고리"
+            )
+    })
+    public ResponseEntity<?> upsertTasks(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "동기화할 전체 작업 공정 목록",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = UpsertTaskRequest.class))
+            )
+            @RequestBody @Valid UpsertTaskRequest utr,
+            BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             FieldError fe = bindingResult.getFieldError();
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, fe.getDefaultMessage());
@@ -94,9 +125,58 @@ public class TaskController {
                         .created(created).deleted(delete).updated(update).build());
     }
 
+
     @GetMapping // 작업 전체 조회
-    @Operation(summary = "작업 전체 조회", description = "등록된 전체 작업 공정 목록 조회")
-    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @Operation(
+            summary = "작업 전체 조회",
+            description = "등록된 전체 작업 공정 목록 조회"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TaskListResponse.class),
+                            examples = @ExampleObject(
+                                    name = "제빵 공정 예시",
+                                    value = """
+                                            {
+                                              "tasks": [
+                                                {
+                                                  "id": "TASK_DOUGH_001",
+                                                  "productId": "BREAD_BAGUETTE",
+                                                  "toolCategoryId": "MIXER",
+                                                  "seq": 1,
+                                                  "name": "반죽 혼합",
+                                                  "description": "밀가루, 물, 이스트 혼합",
+                                                  "duration": 15
+                                                },
+                                                {
+                                                  "id": "TASK_FERMENT_001",
+                                                  "productId": "BREAD_BAGUETTE",
+                                                  "toolCategoryId": "FERMENTER",
+                                                  "seq": 2,
+                                                  "name": "1차 발효",
+                                                  "description": "온도 28도에서 발효",
+                                                  "duration": 60
+                                                },
+                                                {
+                                                  "id": "TASK_BAKE_001",
+                                                  "productId": "BREAD_BAGUETTE",
+                                                  "toolCategoryId": "OVEN",
+                                                  "seq": 3,
+                                                  "name": "굽기",
+                                                  "description": "220도 오븐에서 굽기",
+                                                  "duration": 25
+                                                }
+                                              ]
+                                            }
+                                            """
+                            )
+                    )
+            )
+    })
     public ResponseEntity<?> getTasks() {
         List<Task> allTasks = taskRepository.findAll();
 
@@ -118,9 +198,46 @@ public class TaskController {
 
 
     @GetMapping("/{taskId}") // 작업 상세조회
-    @Operation(summary = "작업 상세 조회", description = "작업 ID 기준 단일 작업 조회")
-    @ApiResponses({@ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "404", description = "작업 없음")})
+    @Operation(
+            summary = "작업 상세 조회",
+            description = "작업 ID 기준 단일 작업 조회"
+    )
+    @ApiResponses(value = {
+
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TaskResponse.class),
+                            examples = @ExampleObject(
+                                    name = "제빵 작업 예시",
+                                    value = """
+                                            {
+                                              "task": {
+                                                "id": "TASK_BAKE_001",
+                                                "product": {
+                                                  "id": "BREAD_BAGUETTE"
+                                                },
+                                                "toolCategory": {
+                                                  "id": "OVEN"
+                                                },
+                                                "seq": 3,
+                                                "name": "굽기",
+                                                "description": "220도 오븐에서 25분간 굽기",
+                                                "duration": 25
+                                              }
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "작업 없음"
+            )
+    })
     public ResponseEntity<?> getTask(@PathVariable("taskId") String taskId) {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(TaskResponse.builder().task(taskRepository.findById(taskId).orElseThrow(() ->
@@ -129,13 +246,84 @@ public class TaskController {
 
 
     @PostMapping(value = "/xls/parse", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "작업 엑셀 파싱", description = "엑셀 파일 업로드 후 작업 공정 데이터 파싱")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "엑셀 파싱 성공"),
-            @ApiResponse(responseCode = "400", description = "엑셀 형식 오류 또는 파일 읽기 실패"),
-            @ApiResponse(responseCode = "404", description = "품목 또는 카테고리 없음")
+    @Operation(
+            summary = "작업 엑셀 파싱",
+            description = """
+                    엑셀 파일 업로드 후 작업 공정 데이터 파싱 수행.
+                    
+                    - 엑셀 첫 번째 시트 기준 파싱
+                    - 첫 행은 헤더로 간주하고 제외
+                    - 각 행은 하나의 작업 공정 데이터로 변환
+                    - 파싱 성공 시 DB 저장 없이 결과만 반환
+                    """
+    )
+    @ApiResponses(value = {
+
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "엑셀 파싱 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ParseTaskXlsResponse.class),
+                            examples = @ExampleObject(
+                                    name = "제빵 공정 엑셀 파싱 예시",
+                                    value = """
+                                            {
+                                              "tasks": [
+                                                {
+                                                  "id": "TASK_DOUGH_001",
+                                                  "productId": "BREAD_BAGUETTE",
+                                                  "toolCategoryId": "MIXER",
+                                                  "seq": 1,
+                                                  "name": "반죽 혼합",
+                                                  "description": "밀가루, 물, 이스트 혼합",
+                                                  "duration": 15
+                                                },
+                                                {
+                                                  "id": "TASK_FERMENT_001",
+                                                  "productId": "BREAD_BAGUETTE",
+                                                  "toolCategoryId": "FERMENTER",
+                                                  "seq": 2,
+                                                  "name": "1차 발효",
+                                                  "description": "온도 28도에서 발효",
+                                                  "duration": 60
+                                                },
+                                                {
+                                                  "id": "TASK_BAKE_001",
+                                                  "productId": "BREAD_BAGUETTE",
+                                                  "toolCategoryId": "OVEN",
+                                                  "seq": 3,
+                                                  "name": "굽기",
+                                                  "description": "220도 오븐에서 25분간 굽기",
+                                                  "duration": 25
+                                                }
+                                              ]
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "엑셀 형식 오류 또는 파일 읽기 실패"
+            ),
+
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "존재하지 않는 품목 또는 카테고리"
+            )
     })
-    public ResponseEntity<?> parseTaskXls(@ModelAttribute ParseXlsRequest pxr) {
+    public ResponseEntity<?> parseTaskXls(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "작업 공정 정보가 포함된 엑셀 파일 업로드",
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            schema = @Schema(implementation = ParseXlsRequest.class)
+                    )
+            )
+            @ModelAttribute ParseXlsRequest pxr) {
 
         try (InputStream is = pxr.file().getInputStream();
              Workbook workbook = WorkbookFactory.create(is)) {

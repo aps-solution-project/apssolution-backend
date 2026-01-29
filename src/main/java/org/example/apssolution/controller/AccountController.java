@@ -214,14 +214,12 @@ public class AccountController {
     })
     public ResponseEntity<?> editPassword(@PathVariable String accountId,
                                           @RequestBody EditAccountPasswordRequest request,
-                                          @RequestAttribute("tokenId") String tokenId,
-                                          @RequestAttribute("role") String role) {
-        if (!tokenId.equals(accountId)) {
+                                          @RequestAttribute Account account) {
+        if (!account.getId().equals(accountId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 비밀번호만 수정할 수 있습니다.");
         }
 
-
-        ServiceResultResponse result = editAccountPasswordService.editPw(accountId, request);
+        ServiceResultResponse result = editAccountPasswordService.editPw(account, request);
         if (!result.isSuccess()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
