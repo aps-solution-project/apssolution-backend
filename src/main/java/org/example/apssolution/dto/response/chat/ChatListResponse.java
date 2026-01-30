@@ -1,5 +1,6 @@
 package org.example.apssolution.dto.response.chat;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,6 +31,8 @@ public class ChatListResponse {
         private String name;
         private String lastMessage;
         private MessageType lastMessageType;
+
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime lastMessageTime;
         private Long unreadCount;
         private List<OtherUser> otherUsers;

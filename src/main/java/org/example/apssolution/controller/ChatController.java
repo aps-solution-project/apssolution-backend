@@ -11,6 +11,7 @@ import org.example.apssolution.dto.response.chat.*;
 import org.example.apssolution.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,10 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 @RestController
@@ -36,6 +34,7 @@ public class ChatController {
     final ChatMemberRepository chatMemberRepository;
     final ChatAttachmentRepository chatAttachmentRepository;
     final ChatMessageRepository chatMessageRepository;
+    final SimpMessagingTemplate template;
 
 
     @PostMapping// 그룹 채팅방 생성 or 그 맴버로 존재하면 해당 채팅방 정보 반환
@@ -192,6 +191,12 @@ public class ChatController {
                         new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 권한이 없습니다."));
         chatMember.setLastActiveAt(LocalDateTime.now());
         chatMemberRepository.save(chatMember);
+
+        template.convertAndSend("/topic/chat/" + chatId, ChatMessageResponse.from(message)
+        );
+        chat.getChatMembers().forEach(member -> {
+            template.convertAndSend("/topic/user/" + member.getAccount().getId(), "refresh");
+        });
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(CreateMessageResponse.from(message));

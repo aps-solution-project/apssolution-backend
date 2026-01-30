@@ -17,6 +17,8 @@ public interface ChatRepository extends JpaRepository<Chat, String> {
     JOIN c.chatMembers cm
     WHERE cm.account.id = :accountId
       AND cm.leftAt IS NULL
+      AND EXISTS (SELECT 1 FROM ChatMessage m WHERE m.chat = c)
+          ORDER BY (SELECT MAX(m.talkedAt) FROM ChatMessage m WHERE m.chat = c) DESC
 """)
     List<Chat> findAllByMemberAccountId(@Param("accountId") String accountId);
 
