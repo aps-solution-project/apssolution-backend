@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -34,5 +35,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/chats/**",
                         "/ws/**"
                 );
+    }
+    // 채팅방에서 이미지 업로드하려고 하니까 크로스오리진 걸려서 지피티가 이거 추가하라고 해서 만들었어요
+    // 만들었더니 일단 크로스오리진 문제는 사라짐
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }

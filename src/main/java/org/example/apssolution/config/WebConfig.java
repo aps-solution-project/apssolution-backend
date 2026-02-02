@@ -21,5 +21,9 @@ public class WebConfig implements WebMvcConfigurer {
                         Path.of(System.getProperty("user.home"), "apssolution", "notices")
                                 .toUri().toString() + "/"
                 );
+
+        String uploadPath = Path.of(System.getProperty("user.home"), "apssolution", "chatAttachments").toAbsolutePath().toString();
+        registry.addResourceHandler("/apssolution/chatAttachments/**")
+                .addResourceLocations("file:///" + uploadPath + "/");
     }
 }
