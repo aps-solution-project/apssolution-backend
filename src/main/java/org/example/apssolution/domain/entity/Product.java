@@ -23,7 +23,6 @@ public class Product {
 
     @PrePersist
     public void prePersist() {
-        this.active = true;
         this.createdAt = LocalDateTime.now();
         if(this.description == null){
             this.description = "";

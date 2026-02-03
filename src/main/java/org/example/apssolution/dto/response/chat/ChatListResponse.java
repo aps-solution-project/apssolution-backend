@@ -54,19 +54,33 @@ public class ChatListResponse {
                 .myChatList(myChats.stream()
                         .map(c -> {
                             ChatMessage lastMessage = c.getChatMessages().stream()
+                                    .filter(cm -> cm.getType() != MessageType.LEAVE)
                                     .max(Comparator.comparing(ChatMessage::getTalkedAt))
                                     .orElse(null);
+                            String lastMsgText;
+                            switch (lastMessage.getType()) {
+                                case TEXT: lastMsgText = lastMessage.getContent(); break;
+                                case IMAGE: lastMsgText = "사진을 보냈습니다."; break;
+                                case FILE: lastMsgText = "파일을 보냈습니다."; break;
+                                default: lastMsgText = "메시지를 보냈습니다.";
+                            }
+
+
                             ChatMember me = c.getChatMembers().stream()
                                     .filter(m -> m.getAccount().getId().equals(account.getId()))
                                     .findFirst().orElse(null);
+                            String defaultRoomName = String.join(", ", c.getChatMembers().stream()
+                                    .filter(cm -> cm.getLeftAt() == null && !cm.getAccount().getId().equals(account.getId()))
+                                    .map(m -> m.getAccount().getName()).toList());
+
                             if (lastMessage == null || me == null) {
                                 return null;
                             }
 
                             return ChatRoom.builder()
                                     .id(c.getId())
-                                    .name(c.getRoomName())
-                                    .lastMessage(lastMessage.getContent() == null ? lastMessage.getType().name() : lastMessage.getContent())
+                                    .name(c.getRoomName().isBlank() ? defaultRoomName : c.getRoomName())
+                                    .lastMessage(lastMsgText)
                                     .lastMessageType(lastMessage.getType())
                                     .lastMessageTime(lastMessage.getTalkedAt())
                                     .unreadCount(c.getChatMessages().stream()
@@ -74,7 +88,7 @@ public class ChatListResponse {
                                                     && m.getTalkedAt().isAfter(me.getLastActiveAt()))
                                             .count())
                                     .otherUsers(c.getChatMembers().stream()
-                                            .filter(m -> !m.getAccount().getId().equals(account.getId()))
+                                            .filter(m -> m.getLeftAt() == null && !m.getAccount().getId().equals(account.getId()))
                                             .map(a -> OtherUser.builder()
                                                     .userId(a.getAccount().getId())
                                                     .name(a.getAccount().getName())

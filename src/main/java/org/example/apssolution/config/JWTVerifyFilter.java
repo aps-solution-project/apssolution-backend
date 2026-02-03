@@ -33,7 +33,7 @@ public class JWTVerifyFilter extends OncePerRequestFilter {
         return req.getMethod().equals("OPTIONS") || uri.startsWith("/api/accounts/login")
                 || uri.startsWith("/swagger") || uri.startsWith("/v3/api-docs")
                 || uri.startsWith("/apssolution") || uri.startsWith("/api/notices/files/download")
-                || uri.startsWith("/ws");
+                || uri.startsWith("/api/chats/files/download") || uri.startsWith("/ws");
     }
 
     @Override

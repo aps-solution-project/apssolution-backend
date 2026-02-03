@@ -134,6 +134,9 @@ public class ProductController {
 
             product.setName(item.getName());
             product.setDescription(item.getDescription());
+            if (item.getActive() != null) {
+                product.setActive(item.getActive());
+            }
 
             return product;
         }).toList();
