@@ -65,7 +65,6 @@ public class ChatListResponse {
                                 default: lastMsgText = "메시지를 보냈습니다.";
                             }
 
-
                             ChatMember me = c.getChatMembers().stream()
                                     .filter(m -> m.getAccount().getId().equals(account.getId()))
                                     .findFirst().orElse(null);
