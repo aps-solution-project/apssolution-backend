@@ -17,7 +17,7 @@ public class ScenarioListResponse {
     @Getter
     @Setter
     @Builder
-    public static class Scenario{
+    public static class Scenario {
         private String id;
         private String title;
         private String description;
@@ -26,5 +26,6 @@ public class ScenarioListResponse {
         private Integer makespan;
         private Integer maxWorkerCount;
         private Boolean published;
+        private LocalDateTime createdAt;
     }
 }

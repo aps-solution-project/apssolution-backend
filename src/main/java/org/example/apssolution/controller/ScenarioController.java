@@ -1,5 +1,7 @@
 package org.example.apssolution.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -28,7 +30,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin
 @RestController
@@ -137,17 +141,22 @@ public class ScenarioController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ScenarioListResponse.builder()
                         .scenarios(scenarioRepository.findAll().stream().map(m ->
-                                ScenarioListResponse.Scenario.builder()
-                                        .id(m.getId())
-                                        .title(m.getTitle())
-                                        .description(m.getDescription())
-                                        .status(m.getStatus())
-                                        .startAt(m.getStartAt())
-                                        .makespan(m.getMakespan())
-                                        .maxWorkerCount(m.getMaxWorkerCount())
-                                        .published(m.getPublished())
-                                        .build()
-                        ).toList()).build());
+                                        ScenarioListResponse.Scenario.builder()
+                                                .id(m.getId())
+                                                .title(m.getTitle())
+                                                .description(m.getDescription())
+                                                .status(m.getStatus())
+                                                .startAt(m.getStartAt())
+                                                .makespan(m.getMakespan())
+                                                .maxWorkerCount(m.getMaxWorkerCount())
+                                                .published(m.getPublished())
+                                                .createdAt(m.getCreatedAt())
+                                                .build()
+                                )
+                                .sorted(Comparator.comparing(
+                                        ScenarioListResponse.Scenario::getCreatedAt,
+                                        Comparator.nullsLast(Comparator.reverseOrder())))
+                                .toList()).build());
     }
 
 

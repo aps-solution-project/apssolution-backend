@@ -26,6 +26,7 @@ public class Scenario {
     private Integer makespan;
     private Integer maxWorkerCount;
     private Boolean published;
+    private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "scenario")
     private List<ScenarioProduct> scenarioProducts;
@@ -45,5 +46,6 @@ public class Scenario {
         if (this.description == null) {
             this.description = "";
         }
+        this.createdAt = LocalDateTime.now();
     }
 }
