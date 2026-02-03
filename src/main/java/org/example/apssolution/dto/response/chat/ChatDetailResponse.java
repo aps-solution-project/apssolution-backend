@@ -60,12 +60,15 @@ public class ChatDetailResponse {
 
     public static ChatDetailResponse from(Chat chat, Account account, ChatMember chatMember) {
         List<ChatMember> members = chat.getChatMembers() == null ? List.of() : chat.getChatMembers();
+        String defaultRoomName = String.join(", ", members.stream()
+                .filter(cm -> cm.getLeftAt() == null && !cm.getAccount().getId().equals(account.getId()))
+                .map(m -> m.getAccount().getName()).toList());
         List<ChatMessage> chatMessages =
                 chat.getChatMessages() == null ? List.of() : chat.getChatMessages();
 
         return ChatDetailResponse.builder()
                 .chatRoomId(chat.getId())
-                .chatRoomName(chat.getRoomName())
+                .chatRoomName(chat.getRoomName().isBlank() ? defaultRoomName : chat.getRoomName())
                 .otherUsers(members.stream()
                         .filter(m -> !m.getAccount().getId().equals(account.getId()))
                         .map(m -> OtherUser.builder()

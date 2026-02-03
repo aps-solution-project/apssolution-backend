@@ -36,5 +36,7 @@ public class UpsertProductRequest {
 
         @Schema(description = "품목 설명", example = "프랑스식 하드 브레드")
         private String description;
+        @Schema(description = "품목 생산라인 가동 여부", example = "true")
+        private Boolean active;
     }
 }

@@ -20,7 +20,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**")          // 적용할 경로
                 .excludePathPatterns("/api/accounts/login",
-                        "/api/notices/files/download/**", "/ws/**");
+                        "/api/notices/files/download/**",
+                        "/api/chats/files/download/**",
+                        "/ws/**");
 
 
         registry.addInterceptor(adminInterceptor)
@@ -32,6 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/accounts",
                         "/api/notices/**",
                         "/api/notices/files/download/**",
+                        "/api/chats/files/download/**",
                         "/api/chats/**",
                         "/ws/**"
                 );
