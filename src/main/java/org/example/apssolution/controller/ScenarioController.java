@@ -336,6 +336,7 @@ public class ScenarioController {
             @ApiResponse(responseCode = "404", description = "시나리오 미존재"),
             @ApiResponse(responseCode = "409", description = "수정 불가 상태")
     })
+    @Transactional
     @PatchMapping("/{scenarioId}") // 시나리오 수정
     public ResponseEntity<?> editScenario(@PathVariable String scenarioId,
                                           @RequestBody EditScenarioRequest esr) {
@@ -347,7 +348,17 @@ public class ScenarioController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "배포된 시나리오는 변경할 수 없습니다.");
         }
 
-        scenarioRepository.save(esr.toScenario(scenario));
+        esr.toScenario(scenario);
+        scenarioProductRepository.deleteByScenarioId(scenarioId);
+        List<ScenarioProduct> scenarioProducts = esr.getScenarioProducts().stream().map(sp ->
+                ScenarioProduct.builder()
+                        .scenario(scenario)
+                        .product(productRepository.findById(sp.getProductId()).orElseThrow(() ->
+                                new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 품목입니다.")))
+                        .qty(sp.getQty())
+                        .build()
+        ).toList();
+        scenarioProductRepository.saveAll(scenarioProducts);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(EditScenarioResponse.builder()

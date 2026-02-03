@@ -110,7 +110,9 @@ public class TaskController {
                     .seq(item.getSeq())
                     .name(item.getName())
                     .description(item.getDescription())
-                    .duration(item.getDuration()).build();
+                    .duration(item.getDuration())
+                    .requiredWorkers(item.getRequiredWorkers())
+                    .build();
         }).toList();
 
         taskRepository.deleteAll(notContainsTasks);
@@ -190,6 +192,7 @@ public class TaskController {
                         .name(t.getName())
                         .description(t.getDescription())
                         .duration(t.getDuration())
+                        .requiredWorkers(t.getRequiredWorkers())
                         .build())
                 .toList();
 
@@ -354,6 +357,7 @@ public class TaskController {
                 String name = formatter.formatCellValue(row.getCell(4));
                 String description = formatter.formatCellValue(row.getCell(5));
                 int duration = Integer.parseInt(formatter.formatCellValue(row.getCell(6)));
+                Integer requiredWorkers = Integer.parseInt(formatter.formatCellValue(row.getCell(7)));
 
                 tasks.add(Task.builder()
                         .id(taskId)
@@ -371,6 +375,7 @@ public class TaskController {
                         .name(name)
                         .description(description)
                         .duration(duration)
+                        .requiredWorkers(requiredWorkers)
                         .build());
             }
 
@@ -385,6 +390,7 @@ public class TaskController {
                                     .name(t.getName())
                                     .description(t.getDescription())
                                     .duration(t.getDuration())
+                                    .requiredWorkers(t.getRequiredWorkers())
                                     .build())
                             .toList();
 
@@ -476,6 +482,9 @@ public class TaskController {
         }
         if (ter.getDuration() != null) {
             task.setDuration(ter.getDuration());
+        }
+        if (ter.getRequiredWorkers() != null) {
+            task.setRequiredWorkers(ter.getRequiredWorkers());
         }
         taskRepository.save(task);
         return ResponseEntity.status(HttpStatus.OK).body(TaskResponse.builder().task(task).build());

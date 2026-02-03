@@ -470,6 +470,7 @@ public class ProductController {
                         .name(t.getName())
                         .description(t.getDescription())
                         .duration(t.getDuration())
+                        .requiredWorkers(t.getRequiredWorkers())
                         .build())
                 .toList();
 

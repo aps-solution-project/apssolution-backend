@@ -15,4 +15,5 @@ public class TaskEditRequest {
     private String name;
     private String description;
     private Integer duration;
+    private Integer requiredWorkers;
 }

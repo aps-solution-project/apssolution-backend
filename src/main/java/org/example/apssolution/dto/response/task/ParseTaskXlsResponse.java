@@ -42,5 +42,8 @@ public class ParseTaskXlsResponse {
 
         @Schema(description = "소요 시간(분)", example = "25")
         private int duration;
+
+        @Schema(description = "요구 인원", example = "1")
+        private Integer requiredWorkers;
     }
 }

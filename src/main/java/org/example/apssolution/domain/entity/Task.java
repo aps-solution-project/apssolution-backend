@@ -26,11 +26,16 @@ public class Task {
     private String name;
     private String description;
     private Integer duration;
+    private Integer requiredWorkers;
+
 
     @PrePersist
     public void prePersist(){
         if (this.description == null){
             this.description = "";
+        }
+        if(this.requiredWorkers == null){
+            this.requiredWorkers = 1;
         }
     }
 }

@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -50,7 +51,7 @@ public class UpsertTaskRequest {
                 example = "1",
                 minimum = "1",
                 requiredMode = Schema.RequiredMode.REQUIRED)
-        private int seq;
+        private Integer seq;
 
         @NotBlank
         @Schema(description = "작업명",
@@ -63,10 +64,15 @@ public class UpsertTaskRequest {
                 example = "30",
                 minimum = "1",
                 requiredMode = Schema.RequiredMode.REQUIRED)
-        private int duration;
+        private Integer duration;
 
         @Schema(description = "작업 상세 설명",
                 example = "반죽 혼합 공정")
         private String description;
+
+        @PositiveOrZero
+        @Schema(description = "요구 인원",
+                example = "1")
+        private Integer requiredWorkers;
     }
 }

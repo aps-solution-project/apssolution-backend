@@ -49,6 +49,7 @@ public class SolveScenarioRequest {
         private String name;
         private String description;
         private Integer duration;
+        private Integer requiredWorkers;
     }
 
     public static SolveScenarioRequest from(Scenario scenario, List<Task> myTasks, List<Tool> tools) {
@@ -79,6 +80,7 @@ public class SolveScenarioRequest {
                                             .name(t.getName())
                                             .description(t.getDescription())
                                             .duration(t.getDuration())
+                                            .requiredWorkers(t.getRequiredWorkers())
                                             .build();
                                 }).toList())
                         .build()
