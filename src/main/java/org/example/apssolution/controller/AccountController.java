@@ -162,6 +162,20 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/active")  // 재직중인 사원 조회
+    @Operation(summary = "재직 사원 목록 조회", description = "퇴사자(resignedAt이 존재하는 사원)를 제외한 전체 사원 목록을 조회합니다.")
+    public ResponseEntity<?> getActiveAccounts() {
+        // Repository에서 resignedAt이 null인 사람만 조회
+        List<Account> activeAccounts = accountRepository.findAllByResignedAtIsNull();
+
+        // Entity 리스트를 DTO 리스트로 변환하여 반환
+        List<GetAccountDetailResponse> response = activeAccounts.stream()
+                .map(account -> GetAccountDetailResponse.from(account))
+                .toList();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @PatchMapping("/{accountId}/edit") // 본인 프로필 수정
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "사원용 정보 수정", description = "로그인한 사원이 본인 프로필 정보를 수정하는 API. 프로필 이미지를 포함한 정보 수정 가능")
