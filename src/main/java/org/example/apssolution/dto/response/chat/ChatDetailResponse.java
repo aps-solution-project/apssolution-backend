@@ -68,7 +68,7 @@ public class ChatDetailResponse {
 
         return ChatDetailResponse.builder()
                 .chatRoomId(chat.getId())
-                .chatRoomName(chat.getRoomName().isBlank() ? defaultRoomName : chat.getRoomName())
+                .chatRoomName(chat.getRoomName() == null || chat.getRoomName().isBlank() ? defaultRoomName : chat.getRoomName())
                 .otherUsers(members.stream()
                         .filter(m -> !m.getAccount().getId().equals(account.getId()))
                         .map(m -> OtherUser.builder()

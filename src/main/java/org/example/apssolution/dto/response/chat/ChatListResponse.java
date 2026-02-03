@@ -79,7 +79,7 @@ public class ChatListResponse {
 
                             return ChatRoom.builder()
                                     .id(c.getId())
-                                    .name(c.getRoomName().isBlank() ? defaultRoomName : c.getRoomName())
+                                    .name((c.getRoomName() == null || c.getRoomName().isBlank()) ? defaultRoomName : c.getRoomName())
                                     .lastMessage(lastMsgText)
                                     .lastMessageType(lastMessage.getType())
                                     .lastMessageTime(lastMessage.getTalkedAt())
