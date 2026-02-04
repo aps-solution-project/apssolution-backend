@@ -1,4 +1,4 @@
-package org.example.apssolution.service;
+package org.example.apssolution.service.simulation;
 
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Scenario;
@@ -8,13 +8,10 @@ import org.example.apssolution.domain.entity.Tool;
 import org.example.apssolution.dto.api_response.SolveApiResult;
 import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.repository.*;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 

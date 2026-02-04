@@ -1,7 +1,5 @@
 package org.example.apssolution.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -13,27 +11,22 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
-import org.example.apssolution.dto.api_response.SolveApiResult;
 import org.example.apssolution.dto.request.scenario.CreateScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioScheduleRequest;
-import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.dto.response.scenario.*;
 import org.example.apssolution.repository.*;
-import org.example.apssolution.service.LongTaskService;
+import org.example.apssolution.service.simulation.LongTaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 @CrossOrigin
 @RestController
