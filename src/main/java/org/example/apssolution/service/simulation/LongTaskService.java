@@ -1,17 +1,16 @@
 package org.example.apssolution.service.simulation;
 
 import lombok.RequiredArgsConstructor;
-import org.example.apssolution.domain.entity.Scenario;
-import org.example.apssolution.domain.entity.ScenarioSchedule;
-import org.example.apssolution.domain.entity.Task;
-import org.example.apssolution.domain.entity.Tool;
+import org.example.apssolution.domain.entity.*;
 import org.example.apssolution.dto.api_response.SolveApiResult;
 import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -34,7 +33,7 @@ public class LongTaskService {
         System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         List<Task> myTasks = taskRepository.findAll();
         List<Tool> myTools = toolRepository.findAll();
-
+        List<Product> myProducts = productRepository.findAll();
 
         SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, myTools);
 
@@ -65,15 +64,18 @@ public class LongTaskService {
         scenario.setMakespan(result.getMakespan());
 
         List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
+            Product product = myProducts.stream().filter(p -> p.getId().equals(s.getProductId())).findFirst().orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 product: " + s.getProductId()));
+            Task task = myTasks.stream().filter(t -> t.getId().equals(s.getTaskId())).findFirst().orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Task: " + s.getTaskId()));
+            Tool tool = myTools.stream().filter(t -> t.getId().equals(s.getToolId())).findFirst().orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Tool: " + s.getToolId()));
             return ScenarioSchedule.builder()
                     .scenario(scenario)
-                    .product(productRepository.findById(s.getProductId())
-                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Product: " + s.getProductId())))
-                    .task(taskRepository.findById(s.getTaskId())
-                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Task: " + s.getTaskId())))
+                    .product(product)
+                    .task(task)
                     .worker(null)
-                    .tool(toolRepository.findById(s.getToolId())
-                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Tool: " + s.getToolId())))
+                    .tool(tool)
                     .startAt(scenario.getStartAt().plusMinutes(s.getStart()))
                     .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
                     .build();
