@@ -70,7 +70,7 @@ public class ChatDetailResponse {
                 .chatRoomId(chat.getId())
                 .chatRoomName(chat.getRoomName() == null || chat.getRoomName().isBlank() ? defaultRoomName : chat.getRoomName())
                 .otherUsers(members.stream()
-                        .filter(m -> !m.getAccount().getId().equals(account.getId()) || m.getLeftAt() == null)
+                        .filter(m -> !m.getAccount().getId().equals(account.getId()) && m.getLeftAt() == null)
                         .map(m -> OtherUser.builder()
                                 .userId(m.getAccount().getId())
                                 .name(m.getAccount().getName())
