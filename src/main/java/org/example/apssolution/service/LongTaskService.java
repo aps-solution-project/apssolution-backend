@@ -1,0 +1,90 @@
+package org.example.apssolution.service;
+
+import lombok.RequiredArgsConstructor;
+import org.example.apssolution.domain.entity.Scenario;
+import org.example.apssolution.domain.entity.ScenarioSchedule;
+import org.example.apssolution.domain.entity.Task;
+import org.example.apssolution.domain.entity.Tool;
+import org.example.apssolution.dto.api_response.SolveApiResult;
+import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
+import org.example.apssolution.repository.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class LongTaskService {
+
+    private final TaskRepository taskRepository;
+    private final ToolRepository toolRepository;
+    private final ScenarioRepository scenarioRepository;
+    private final ProductRepository productRepository;
+    private final ScenarioScheduleRepository scenarioScheduleRepository;
+
+
+    private final RestClient restClient;
+
+    @Async("taskExecutor")
+    @Transactional
+    public void processLongTask(Scenario scenario) {
+        System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        List<Task> myTasks = taskRepository.findAll();
+        List<Tool> myTools = toolRepository.findAll();
+
+
+        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, myTools);
+
+        SolveApiResult result;
+        try {
+            result = restClient.post()
+                    .uri("http://192.168.0.20:5000/api/solve")
+                    .body(request)
+                    .retrieve()
+                    .body(SolveApiResult.class);
+        } catch (Exception e) {
+            scenario.setStatus("FAILED");
+            scenarioRepository.save(scenario);
+            return;
+        }
+
+        if (result == null || result.getStatus() == null) {
+            scenario.setStatus("FAILED");
+            scenarioRepository.save(scenario);
+            return;
+        } else if (result.getSchedules() == null || result.getSchedules().isEmpty()) {
+            scenario.setStatus("FAILED");
+            scenarioRepository.save(scenario);
+            return;
+        }
+
+        scenario.setStatus(result.getStatus());
+        scenario.setMakespan(result.getMakespan());
+
+        List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
+            return ScenarioSchedule.builder()
+                    .scenario(scenario)
+                    .product(productRepository.findById(s.getProductId())
+                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Product: " + s.getProductId())))
+                    .task(taskRepository.findById(s.getTaskId())
+                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Task: " + s.getTaskId())))
+                    .worker(null)
+                    .tool(toolRepository.findById(s.getToolId())
+                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Tool: " + s.getToolId())))
+                    .startAt(scenario.getStartAt().plusMinutes(s.getStart()))
+                    .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
+                    .build();
+        }).toList();
+
+        scenarioScheduleRepository.deleteByScenario(scenario);
+        scenarioRepository.save(scenario);
+        scenarioScheduleRepository.saveAll(scenarioSchedules);
+        System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+    }
+}
