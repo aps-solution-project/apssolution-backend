@@ -279,6 +279,9 @@ public class ChatController {
         chatMember.setLeftAt(LocalDateTime.now());
         chatMemberRepository.save(chatMember);
 
+        chat.setSignature(String.join(":", Arrays.stream(chat.getSignature().split(":")).filter(id -> !id.equals(account.getId())).toList()));
+        chatRepository.save(chat);
+
         ChatMessage message = ChatMessage.builder()
                 .chat(chat)
                 .talker(account)
@@ -299,6 +302,38 @@ public class ChatController {
         });
 
         return ResponseEntity.noContent().build();
+    }
+
+
+    @GetMapping("/unread-count")
+    public ResponseEntity<?> getUnreadMessages(@RequestAttribute Account account) {
+        List<Chat> myChats = chatRepository.findAllByMemberAccountId(account.getId());
+
+        // 2️⃣ 전체 안 읽은 메시지 합산
+        long totalUnread = 0;
+        for (Chat chat : myChats) {
+            ChatMember me = chat.getChatMembers().stream()
+                    .filter(m -> m.getAccount().getId().equals(account.getId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (me == null) continue;
+
+            long unreadCount = chat.getChatMessages().stream()
+                    .filter(m -> !m.getTalker().getId().equals(account.getId()))
+                    .filter(m -> m.getTalkedAt().isAfter(me.getLastActiveAt()))
+                    .count();
+
+            totalUnread += unreadCount;
+        }
+
+        // 3️⃣ DTO 반환
+        TotalUnreadCountResponse response = TotalUnreadCountResponse.builder()
+                .totalUnreadCount(totalUnread)
+                .build();
+
+        return ResponseEntity.ok(response);
+
     }
 
 

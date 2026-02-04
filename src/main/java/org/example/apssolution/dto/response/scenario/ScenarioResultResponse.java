@@ -98,7 +98,7 @@ public class ScenarioResultResponse {
                                 .duration(s.getTask().getDuration())
                                 .build())
                         .worker(Worker.builder()
-                                .id(s.getWorker().getId())
+                                .id(s.getWorker() == null ? null : s.getWorker().getId())
                                 .name(s.getWorker().getName())
                                 .build())
                         .toolId(s.getTool().getId())

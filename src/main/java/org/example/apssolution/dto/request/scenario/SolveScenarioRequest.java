@@ -11,8 +11,8 @@ import java.util.List;
 @Getter
 @Setter
 public class SolveScenarioRequest {
-    SolveScenarioRequest.ScenarioSolution scenario;
-    List<SolveScenarioRequest.ScenarioProducts> scenarioProductList;
+    ScenarioSolution scenario;
+    List<ScenarioProducts> scenarioProductList;
     List<Tool> tools;
 
     @Getter
@@ -36,6 +36,7 @@ public class SolveScenarioRequest {
         private String name;
         private String description;
         private String productId;
+        private Integer qty;
         private List<ScenarioTask> scenarioTasks;
     }
 
@@ -65,11 +66,12 @@ public class SolveScenarioRequest {
                 .build();
 
         List<SolveScenarioRequest.ScenarioProducts> scenarioProducts = scenario.getScenarioProducts().stream().map(m ->
-                SolveScenarioRequest.ScenarioProducts.builder()
+                ScenarioProducts.builder()
                         .id(m.getProduct().getId())
                         .name(m.getProduct().getName())
                         .description(m.getProduct().getDescription())
                         .productId(m.getProduct().getId())
+                        .qty(m.getQty())
                         .scenarioTasks(myTasks.stream()
                                 .filter(f -> f.getProduct().getId().equals(m.getProduct().getId()))
                                 .map(t -> {
