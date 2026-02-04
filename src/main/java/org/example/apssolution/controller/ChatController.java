@@ -283,14 +283,10 @@ public class ChatController {
                 .chat(chat)
                 .talker(account)
                 .type(MessageType.LEAVE)
+                .content(account.getName() + "님이 나갔습니다.")
                 .build();
 
         chatMessageRepository.save(message);
-
-        // 🔥 채팅방에 아무도 안 남으면 방 삭제 여부 선택 가능
-        if (chatMemberRepository.countByChat_IdAndLeftAtIsNull(chatId) <= 1) {
-            chatRepository.delete(chat);
-        }
 
         // 🔔 나가기 소켓 알림
         template.convertAndSend("/topic/chat/" + chatId, ChatMessageResponse.from(message));
@@ -298,9 +294,11 @@ public class ChatController {
             template.convertAndSend("/topic/user/" + member.getAccount().getId(), "refresh");
         });
 
+        // 🔥 채팅방에 아무도 안 남으면 방 삭제 여부 선택 가능
+        if (chatMemberRepository.countByChat_IdAndLeftAtIsNull(chatId) <= 1) {
+            chatRepository.delete(chat);
+        }
+
         return ResponseEntity.noContent().build();
     }
-
-
-
 }
