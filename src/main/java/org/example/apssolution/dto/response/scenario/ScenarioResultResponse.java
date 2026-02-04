@@ -99,7 +99,7 @@ public class ScenarioResultResponse {
                                 .build())
                         .worker(Worker.builder()
                                 .id(s.getWorker() == null ? null : s.getWorker().getId())
-                                .name(s.getWorker().getName())
+                                .name(s.getWorker() == null ? null : s.getWorker().getName())
                                 .build())
                         .toolId(s.getTool().getId())
                         .startAt(s.getStartAt())
