@@ -404,6 +404,16 @@ public class ScenarioController {
                 .build();
 
         scenarioRepository.save(cloneScenario);
+
+        List<ScenarioProduct> scenarioProducts = scenarioProductRepository.findByScenarioId(scenarioId).stream().map(sp ->
+                ScenarioProduct.builder()
+                        .scenario(scenario)
+                        .product(sp.getProduct())
+                        .qty(sp.getQty())
+                        .build()
+        ).toList();
+        scenarioProductRepository.saveAll(scenarioProducts);
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ScenarioCloneResponse.builder()
                         .cloneScenario(ScenarioCloneResponse.from(cloneScenario))
@@ -583,7 +593,7 @@ public class ScenarioController {
         SolveApiResult result;
         try {
             result = restClient.post()
-                    .uri("http://127.0.0.1:5000/api/solve")
+                    .uri("http://192.168.0.20:5000/api/solve")
                     .body(request)
                     .retrieve()
                     .body(SolveApiResult.class);
