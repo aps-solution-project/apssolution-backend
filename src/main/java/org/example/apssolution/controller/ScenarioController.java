@@ -20,6 +20,7 @@ import org.example.apssolution.dto.request.scenario.EditScenarioScheduleRequest;
 import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.dto.response.scenario.*;
 import org.example.apssolution.repository.*;
+import org.example.apssolution.service.LongTaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -49,6 +50,8 @@ public class ScenarioController {
     final ToolRepository toolRepository;
     final TaskRepository taskRepository;
 
+    final LongTaskService longTaskService;
+    
     @Operation(
             summary = "시나리오 생성",
             description = "신규 시나리오 생성 및 품목 구성 정보 저장 처리"
@@ -407,7 +410,7 @@ public class ScenarioController {
 
         List<ScenarioProduct> scenarioProducts = scenarioProductRepository.findByScenarioId(scenarioId).stream().map(sp ->
                 ScenarioProduct.builder()
-                        .scenario(scenario)
+                        .scenario(cloneScenario)
                         .product(sp.getProduct())
                         .qty(sp.getQty())
                         .build()
@@ -577,64 +580,23 @@ public class ScenarioController {
             @ApiResponse(responseCode = "502", description = "스케줄러 엔진 호출 실패"),
             @ApiResponse(responseCode = "500", description = "스케줄 결과 생성 실패")
     })
-    @Transactional
     @PostMapping("/{scenarioId}/simulate") // scenario simulation 수정중
     public ResponseEntity<?> simulateScenario(@PathVariable String scenarioId) {
-
+        System.out.println(scenarioId);
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
-
-        List<Task> myTasks = taskRepository.findAll();
-        List<Tool> myTools = toolRepository.findAll();
-
-        RestClient restClient = RestClient.create();
-        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, myTools);
-
-        SolveApiResult result;
-        try {
-            result = restClient.post()
-                    .uri("http://192.168.0.20:5000/api/solve")
-                    .body(request)
-                    .retrieve()
-                    .body(SolveApiResult.class);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body("스케줄러 엔진 호출 실패");
+        if(!scenario.getStatus().equals("READY")) {
+            throw  new ResponseStatusException(HttpStatus.BAD_REQUEST, "시나리오를 찾을 수 없습니다.");
         }
 
-        if (result == null || result.getStatus() == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("스케줄링 결과가 생성되지 않음");
-        } else if (result.getSchedules() == null || result.getSchedules().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("스케줄 결과가 비어있음");
-        }
-
-        scenario.setStatus(result.getStatus());
-        scenario.setMakespan(result.getMakespan());
-
-        List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
-            return ScenarioSchedule.builder()
-                    .scenario(scenario)
-                    .product(productRepository.findById(s.getProductId())
-                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Product: " + s.getProductId())))
-                    .task(taskRepository.findById(s.getTaskId())
-                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Task: " + s.getTaskId())))
-                    .worker(null)
-                    .tool(toolRepository.findById(s.getToolId())
-                            .orElseThrow(() -> new IllegalStateException("존재하지 않는 Tool: " + s.getToolId())))
-                    .startAt(scenario.getStartAt().plusMinutes(s.getStart()))
-                    .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
-                    .build();
-        }).toList();
-
-        scenarioScheduleRepository.deleteByScenario(scenario);
+        scenario.setStatus("PENDING");
         scenarioRepository.save(scenario);
-        scenarioScheduleRepository.saveAll(scenarioSchedules);
+        System.out.println("simulate start");
+        longTaskService.processLongTask(scenario);
 
-        return ResponseEntity.status(HttpStatus.OK).body(SimulateScenarioResponse.builder()
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(SimulateScenarioResponse.builder()
                 .scenarioId(scenarioId)
-                .status(result.getStatus())
+                .status("PENDING")
                 .build());
     }
 }

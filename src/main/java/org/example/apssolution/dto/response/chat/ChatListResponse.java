@@ -59,10 +59,17 @@ public class ChatListResponse {
                                     .orElse(null);
                             String lastMsgText;
                             switch (lastMessage.getType()) {
-                                case TEXT: lastMsgText = lastMessage.getContent(); break;
-                                case IMAGE: lastMsgText = "사진을 보냈습니다."; break;
-                                case FILE: lastMsgText = "파일을 보냈습니다."; break;
-                                default: lastMsgText = "메시지를 보냈습니다.";
+                                case TEXT:
+                                    lastMsgText = lastMessage.getContent();
+                                    break;
+                                case IMAGE:
+                                    lastMsgText = "사진을 보냈습니다.";
+                                    break;
+                                case FILE:
+                                    lastMsgText = "파일을 보냈습니다.";
+                                    break;
+                                default:
+                                    lastMsgText = "메시지를 보냈습니다.";
                             }
 
                             ChatMember me = c.getChatMembers().stream()
@@ -84,7 +91,8 @@ public class ChatListResponse {
                                     .lastMessageTime(lastMessage.getTalkedAt())
                                     .unreadCount(c.getChatMessages().stream()
                                             .filter(m -> !m.getTalker().getId().equals(account.getId())
-                                                    && m.getTalkedAt().isAfter(me.getLastActiveAt()))
+                                                    && m.getTalkedAt().isAfter(me.getLastActiveAt())
+                                                    && m.getType() != MessageType.LEAVE)
                                             .count())
                                     .otherUsers(c.getChatMembers().stream()
                                             .filter(m -> m.getLeftAt() == null && !m.getAccount().getId().equals(account.getId()))

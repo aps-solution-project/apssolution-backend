@@ -1,10 +1,7 @@
 package org.example.apssolution.domain.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.*;
 import lombok.*;
-import jakarta.persistence.Id;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,10 +25,10 @@ public class Scenario {
     private Boolean published;
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "scenario")
+    @OneToMany(mappedBy = "scenario",fetch = FetchType.EAGER)
     private List<ScenarioProduct> scenarioProducts;
 
-    @OneToMany(mappedBy = "scenario")
+    @OneToMany(mappedBy = "scenario",fetch = FetchType.EAGER)
     private List<ScenarioSchedule> scenarioSchedules;
 
     @PrePersist
