@@ -3,9 +3,13 @@ package org.example.apssolution.service.simulation;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
 import org.example.apssolution.dto.api_response.SolveApiResult;
+import org.example.apssolution.dto.open_ai.ScenarioAiFeedbackRequest;
 import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
+import org.example.apssolution.dto.response.chat.ChatMessageResponse;
+import org.example.apssolution.dto.response.scenario.ScenarioSimulationResultResponse;
 import org.example.apssolution.repository.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +29,7 @@ public class LongTaskService {
     private final ScenarioScheduleRepository scenarioScheduleRepository;
 
     private final SimulateResultService simulateResultService;
+    final SimpMessagingTemplate template;
 
     private final RestClient restClient;
 
@@ -81,14 +86,20 @@ public class LongTaskService {
                     .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
                     .build();
         }).toList();
-        scenarioScheduleRepository.deleteByScenario(scenario);
-        scenarioRepository.save(scenario);
-        scenarioScheduleRepository.saveAll(scenarioSchedules);
+
         System.out.println("********** Python Calculate Finish **********");
 
         if (scenario.getStatus().equals("OPTIMAL") || scenario.getStatus().equals("FEASIBLE")) {
-
+            String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(scenario, result));
+            System.out.println(feedback);
+            scenario.setAiScheduleFeedback(feedback);
             simulateResultService.sendResultMail(account, scenario);
         }
+        scenarioScheduleRepository.deleteByScenario(scenario);
+        scenarioRepository.save(scenario);
+        scenarioScheduleRepository.saveAll(scenarioSchedules);
+
+        template.convertAndSend("/topic/scenario/"
+                + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
     }
 }

@@ -14,7 +14,6 @@ public class SolveApiResult {
     private Integer makespan;
     private String status;
     private List<Schedule> schedules;
-
     // 🔥 추가: 분석 결과
     private Analysis analysis;
 
@@ -51,6 +50,7 @@ public class SolveApiResult {
     @Setter
     public static class Analysis {
 
+        // 가장 많이 사용된 설비
         private BottleneckTool bottleneckTool;
 
         // 전체 인력 가동률 (0~1)
@@ -58,8 +58,16 @@ public class SolveApiResult {
 
         // 공정 간 평균 대기시간
         private Double averageIdleTimeBetweenTasks;
-    }
 
+        // 최대 동시 작업자 수
+        private Double peakConcurrentWorkers;
+
+        // 🔥 설비 전체 가동률 (0~1)
+        private Double equipmentUtilization;
+
+        // 🔥 병목 공정 정보
+        private BottleneckProcess bottleneckProcess;
+    }
 
     // -------------------------------
     // 병목 설비 정보
@@ -70,8 +78,25 @@ public class SolveApiResult {
     public static class BottleneckTool {
 
         private String tool;
-
+        @JsonProperty("toolCategoryId")
+        private String toolCategoryId;
         // 해당 설비 총 사용 시간
         private Integer totalUsageTime;
     }
+
+    @Getter
+    @Setter
+    @Builder
+    public static class BottleneckProcess {
+
+        @JsonProperty("taskId")
+        private String taskId;
+
+        @JsonProperty("productId")
+        private String productId;
+
+        // 해당 공정 소요시간
+        private Integer duration;
+    }
+
 }

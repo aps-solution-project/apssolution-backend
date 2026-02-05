@@ -26,10 +26,16 @@ public class Scenario {
     private LocalDateTime createdAt;
     private String aiScheduleFeedback;
 
-    @OneToMany(mappedBy = "scenario",fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "scenario",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+            ,fetch = FetchType.EAGER)
     private List<ScenarioProduct> scenarioProducts;
 
-    @OneToMany(mappedBy = "scenario",fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "scenario",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+            ,fetch = FetchType.EAGER)
     private List<ScenarioSchedule> scenarioSchedules;
 
     @PrePersist

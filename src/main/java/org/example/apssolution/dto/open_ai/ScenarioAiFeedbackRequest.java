@@ -1,10 +1,12 @@
 package org.example.apssolution.dto.open_ai;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.apssolution.domain.entity.Scenario;
 import org.example.apssolution.dto.api_response.SolveApiResult;
+import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -72,8 +74,10 @@ public class ScenarioAiFeedbackRequest {
 
     @Getter
     @Setter
+    @Builder
     public static class Analysis {
 
+        // 가장 많이 사용된 설비
         private BottleneckTool bottleneckTool;
 
         // 전체 인력 가동률 (0~1)
@@ -81,21 +85,39 @@ public class ScenarioAiFeedbackRequest {
 
         // 공정 간 평균 대기시간
         private Double averageIdleTimeBetweenTasks;
-    }
 
-    // -------------------------------
-    // 병목 설비 정보
-    // -------------------------------
+        // 최대 동시 작업자 수
+        private Double peakConcurrentWorkers;
+
+        // 🔥 설비 전체 가동률 (0~1)
+        private Double equipmentUtilization;
+
+        // 🔥 병목 공정 정보
+        private BottleneckProcess bottleneckProcess;
+    }
     @Getter
     @Setter
     @Builder
     public static class BottleneckTool {
+
         private String tool;
+        private String toolCategoryId;
         // 해당 설비 총 사용 시간
         private Integer totalUsageTime;
     }
 
-    public static ScenarioAiFeedbackRequest from(Scenario scenario) {
+    @Getter
+    @Setter
+    @Builder
+    public static class BottleneckProcess {
+
+        private String taskId;
+        private String productId;
+
+        // 해당 공정 소요시간
+        private Integer duration;
+    }
+    public static ScenarioAiFeedbackRequest from(Scenario scenario, SolveApiResult sar) {
         ScenarioAiFeedbackRequest resp = new ScenarioAiFeedbackRequest();
 
         ScenarioSolution scenarioSolution = ScenarioSolution.builder()
@@ -134,8 +156,27 @@ public class ScenarioAiFeedbackRequest {
                         .build()).toList())
                 .build()
         ).toList();
+
+        Analysis analysis = Analysis.builder()
+                .bottleneckTool(BottleneckTool.builder()
+                        .tool(sar.getAnalysis().getBottleneckTool().getTool())
+                        .toolCategoryId(sar.getAnalysis().getBottleneckTool().getToolCategoryId())
+                        .totalUsageTime(sar.getAnalysis().getBottleneckTool().getTotalUsageTime())
+                        .build())
+                .workerUtilization(sar.getAnalysis().getWorkerUtilization())
+                .averageIdleTimeBetweenTasks(sar.getAnalysis().getAverageIdleTimeBetweenTasks())
+                .peakConcurrentWorkers(sar.getAnalysis().getPeakConcurrentWorkers())
+                .equipmentUtilization(sar.getAnalysis().getEquipmentUtilization())
+                .bottleneckProcess(BottleneckProcess.builder()
+                        .taskId(sar.getAnalysis().getBottleneckProcess().getTaskId())
+                        .productId(sar.getAnalysis().getBottleneckProcess().getProductId())
+                        .duration(sar.getAnalysis().getBottleneckProcess().getDuration())
+                        .build())
+                .build();
+
         resp.setScenario(scenarioSolution);
         resp.setScenarioProductList(scenarioProducts);
+        resp.setAnalysis(analysis);
         return resp;
     }
 }
