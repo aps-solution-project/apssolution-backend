@@ -3,9 +3,13 @@ package org.example.apssolution.service.simulation;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
 import org.example.apssolution.dto.api_response.SolveApiResult;
+import org.example.apssolution.dto.open_ai.ScenarioAiFeedbackRequest;
 import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
+import org.example.apssolution.dto.response.chat.ChatMessageResponse;
+import org.example.apssolution.dto.response.scenario.ScenarioSimulationResultResponse;
 import org.example.apssolution.repository.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +28,20 @@ public class LongTaskService {
     private final ProductRepository productRepository;
     private final ScenarioScheduleRepository scenarioScheduleRepository;
 
+    private final SimulateResultService simulateResultService;
+    final SimpMessagingTemplate template;
 
     private final RestClient restClient;
 
     @Async("taskExecutor")
     @Transactional
-    public void processLongTask(Scenario scenario) {
-        System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+    public void processLongTask(Account account, Scenario scenario) {
+        System.out.println("********** Python Calculate Start **********");
         List<Task> myTasks = taskRepository.findAll();
-        List<Tool> myTools = toolRepository.findAll();
+        List<Tool> usingTools = toolRepository.findToolsUsedInScenario(scenario.getId());
         List<Product> myProducts = productRepository.findAll();
 
-        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, myTools);
+        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, usingTools);
 
         SolveApiResult result;
         try {
@@ -60,7 +66,7 @@ public class LongTaskService {
             return;
         }
 
-        scenario.setStatus(result.getStatus());
+        scenario.setStatus(result.getStatus().toUpperCase());
         scenario.setMakespan(result.getMakespan());
 
         List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
@@ -68,7 +74,7 @@ public class LongTaskService {
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 product: " + s.getProductId()));
             Task task = myTasks.stream().filter(t -> t.getId().equals(s.getTaskId())).findFirst().orElseThrow(() ->
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Task: " + s.getTaskId()));
-            Tool tool = myTools.stream().filter(t -> t.getId().equals(s.getToolId())).findFirst().orElseThrow(() ->
+            Tool tool = usingTools.stream().filter(t -> t.getId().equals(s.getToolId())).findFirst().orElseThrow(() ->
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Tool: " + s.getToolId()));
             return ScenarioSchedule.builder()
                     .scenario(scenario)
@@ -81,9 +87,18 @@ public class LongTaskService {
                     .build();
         }).toList();
 
+        System.out.println("********** Python Calculate Finish **********");
+
+        if (scenario.getStatus().equals("OPTIMAL") || scenario.getStatus().equals("FEASIBLE")) {
+            String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(scenario, result));
+            scenario.setAiScheduleFeedback(feedback);
+            simulateResultService.sendResultMail(account, scenario);
+        }
         scenarioScheduleRepository.deleteByScenario(scenario);
         scenarioRepository.save(scenario);
         scenarioScheduleRepository.saveAll(scenarioSchedules);
-        System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+        template.convertAndSend("/topic/scenario/"
+                + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
     }
 }
