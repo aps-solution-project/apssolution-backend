@@ -577,7 +577,6 @@ public class ScenarioController {
     @PostMapping("/{scenarioId}/simulate") // scenario simulation 수정중
     public ResponseEntity<?> simulateScenario(@RequestAttribute Account account,
                                               @PathVariable String scenarioId) {
-        System.out.println(scenarioId);
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
         if (!scenario.getStatus().equals("READY")) {

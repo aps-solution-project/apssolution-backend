@@ -91,7 +91,6 @@ public class LongTaskService {
 
         if (scenario.getStatus().equals("OPTIMAL") || scenario.getStatus().equals("FEASIBLE")) {
             String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(scenario, result));
-            System.out.println(feedback);
             scenario.setAiScheduleFeedback(feedback);
             simulateResultService.sendResultMail(account, scenario);
         }
