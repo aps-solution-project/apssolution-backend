@@ -13,5 +13,5 @@ public class CreateNoticeRequest {
     private String title;
     private String content;
     private String scenarioId;
-    private List<MultipartFile> attachment;
+    private List<MultipartFile> attachments;
 }
