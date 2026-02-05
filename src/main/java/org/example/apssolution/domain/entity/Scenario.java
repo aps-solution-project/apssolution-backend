@@ -24,6 +24,7 @@ public class Scenario {
     private Integer maxWorkerCount;
     private Boolean published;
     private LocalDateTime createdAt;
+    private String aiScheduleFeedback;
 
     @OneToMany(mappedBy = "scenario",fetch = FetchType.EAGER)
     private List<ScenarioProduct> scenarioProducts;

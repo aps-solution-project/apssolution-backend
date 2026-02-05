@@ -14,6 +14,7 @@ import org.example.apssolution.domain.entity.*;
 import org.example.apssolution.dto.request.scenario.CreateScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioScheduleRequest;
+import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.dto.response.scenario.*;
 import org.example.apssolution.repository.*;
 import org.example.apssolution.service.simulation.LongTaskService;
@@ -44,7 +45,7 @@ public class ScenarioController {
     final TaskRepository taskRepository;
 
     final LongTaskService longTaskService;
-    
+
     @Operation(
             summary = "시나리오 생성",
             description = "신규 시나리오 생성 및 품목 구성 정보 저장 처리"
@@ -574,18 +575,18 @@ public class ScenarioController {
             @ApiResponse(responseCode = "500", description = "스케줄 결과 생성 실패")
     })
     @PostMapping("/{scenarioId}/simulate") // scenario simulation 수정중
-    public ResponseEntity<?> simulateScenario(@PathVariable String scenarioId) {
+    public ResponseEntity<?> simulateScenario(@RequestAttribute Account account,
+                                              @PathVariable String scenarioId) {
         System.out.println(scenarioId);
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
-        if(!scenario.getStatus().equals("READY")) {
-            throw  new ResponseStatusException(HttpStatus.BAD_REQUEST, "시나리오를 찾을 수 없습니다.");
+        if (!scenario.getStatus().equals("READY")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "시나리오를 찾을 수 없습니다.");
         }
 
         scenario.setStatus("PENDING");
         scenarioRepository.save(scenario);
-        System.out.println("simulate start");
-        longTaskService.processLongTask(scenario);
+        longTaskService.processLongTask(account, scenario);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SimulateScenarioResponse.builder()
                 .scenarioId(scenarioId)

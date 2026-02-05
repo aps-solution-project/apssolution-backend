@@ -56,7 +56,7 @@ public class SolveScenarioRequest {
     public static SolveScenarioRequest from(Scenario scenario, List<Task> myTasks, List<Tool> tools) {
         SolveScenarioRequest resp = new SolveScenarioRequest();
 
-        SolveScenarioRequest.ScenarioSolution scenarioSolution = SolveScenarioRequest.ScenarioSolution.builder()
+        ScenarioSolution scenarioSolution = ScenarioSolution.builder()
                 .id(scenario.getId())
                 .title(scenario.getTitle())
                 .description(scenario.getDescription())
@@ -65,7 +65,7 @@ public class SolveScenarioRequest {
                 .maxWorkerCount(scenario.getMaxWorkerCount())
                 .build();
 
-        List<SolveScenarioRequest.ScenarioProducts> scenarioProducts = scenario.getScenarioProducts().stream().map(m ->
+        List<ScenarioProducts> scenarioProducts = scenario.getScenarioProducts().stream().map(m ->
                 ScenarioProducts.builder()
                         .id(m.getProduct().getId())
                         .name(m.getProduct().getName())
