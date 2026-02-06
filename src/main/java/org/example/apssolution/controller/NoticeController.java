@@ -43,6 +43,7 @@ import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -128,7 +129,7 @@ public class NoticeController {
                                 .map(n -> {
                                     int count = noticeCommentRepository.countByNoticeId(n.getId());
                                     return NoticeListResponse.from(n, count);
-                                })
+                                }).sorted(Comparator.comparing(NoticeListResponse.NoticeInfo::getCreatedAt).reversed())
                                 .toList())
                         .build()
         );

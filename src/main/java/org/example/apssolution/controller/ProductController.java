@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -310,7 +311,11 @@ public class ProductController {
     @GetMapping // 품목 전체 조회
     public ResponseEntity<?> getProducts() {
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ProductListResponse.builder().products(productRepository.findAll()).build());
+                .body(ProductListResponse.builder()
+                        .products(productRepository.findAll().stream()
+                                .sorted(Comparator.comparing(Product::getActive).reversed())
+                                .toList())
+                        .build());
     }
 
 
