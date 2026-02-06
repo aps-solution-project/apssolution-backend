@@ -46,7 +46,7 @@ public class CreateNoticeService {
         noticeRepository.save(notice);
 
         // 첨부파일은 선택
-        List<MultipartFile> attachments = request.getAttachment();
+        List<MultipartFile> attachments = request.getAttachments();
 
         if (attachments != null && !attachments.isEmpty()) {
             for (MultipartFile file : attachments) {

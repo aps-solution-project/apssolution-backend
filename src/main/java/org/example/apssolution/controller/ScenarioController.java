@@ -585,7 +585,7 @@ public class ScenarioController {
 
         scenario.setStatus("PENDING");
         scenarioRepository.save(scenario);
-        longTaskService.processLongTask(account, scenario);
+        longTaskService.processLongTask(account, scenarioId);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SimulateScenarioResponse.builder()
                 .scenarioId(scenarioId)
