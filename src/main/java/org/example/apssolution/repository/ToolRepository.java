@@ -1,6 +1,7 @@
 package org.example.apssolution.repository;
 
 import org.example.apssolution.domain.entity.Tool;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +11,18 @@ import java.util.List;
 
 @Repository
 public interface ToolRepository extends JpaRepository<Tool,String> {
+    @Query("""
+    select t
+    from Tool t
+    join t.category c
+    where t.id like %:keyword%
+       or t.description like %:keyword%
+       or c.id like %:keyword%
+       or c.name like %:keyword%
+""")
+    List<Tool> search(@Param("keyword") String keyword, Pageable pageable);
+
+
     @Query("""
     SELECT DISTINCT t
     FROM Tool t
