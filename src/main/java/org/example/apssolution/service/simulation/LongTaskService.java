@@ -35,7 +35,8 @@ public class LongTaskService {
 
     @Async("taskExecutor")
     @Transactional
-    public void processLongTask(Account account, Scenario scenario) {
+    public void processLongTask(Account account, String scenarioId) {
+        Scenario scenario = scenarioRepository.findById(scenarioId).get();
         System.out.println("********** Python Calculate Start **********");
         List<Task> myTasks = taskRepository.findAll();
         List<Tool> usingTools = toolRepository.findToolsUsedInScenario(scenario.getId());
@@ -56,18 +57,19 @@ public class LongTaskService {
             return;
         }
 
+        Scenario one = scenarioRepository.findById(scenarioId).get();
         if (result == null || result.getStatus() == null) {
-            scenario.setStatus("FAILED");
-            scenarioRepository.save(scenario);
+            one.setStatus("FAILED");
+            scenarioRepository.save(one);
             return;
         } else if (result.getSchedules() == null || result.getSchedules().isEmpty()) {
-            scenario.setStatus("FAILED");
-            scenarioRepository.save(scenario);
+            one.setStatus("FAILED");
+            scenarioRepository.save(one);
             return;
         }
 
-        scenario.setStatus(result.getStatus().toUpperCase());
-        scenario.setMakespan(result.getMakespan());
+        one.setStatus(result.getStatus().toUpperCase());
+        one.setMakespan(result.getMakespan());
 
         List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
             Product product = myProducts.stream().filter(p -> p.getId().equals(s.getProductId())).findFirst().orElseThrow(() ->
@@ -77,25 +79,25 @@ public class LongTaskService {
             Tool tool = usingTools.stream().filter(t -> t.getId().equals(s.getToolId())).findFirst().orElseThrow(() ->
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Tool: " + s.getToolId()));
             return ScenarioSchedule.builder()
-                    .scenario(scenario)
+                    .scenario(one)
                     .product(product)
                     .task(task)
                     .worker(null)
                     .tool(tool)
-                    .startAt(scenario.getStartAt().plusMinutes(s.getStart()))
-                    .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
+                    .startAt(one.getStartAt().plusMinutes(s.getStart()))
+                    .endAt(one.getStartAt().plusMinutes(s.getEnd()))
                     .build();
         }).toList();
 
         System.out.println("********** Python Calculate Finish **********");
 
         if (scenario.getStatus().equals("OPTIMAL") || scenario.getStatus().equals("FEASIBLE")) {
-            String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(scenario, result));
+            String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(one, result));
             scenario.setAiScheduleFeedback(feedback);
-            simulateResultService.sendResultMail(account, scenario);
+            simulateResultService.sendResultMail(account, one);
         }
-        scenarioScheduleRepository.deleteByScenario(scenario);
-        scenarioRepository.save(scenario);
+        scenarioScheduleRepository.deleteByScenario(one);
+        scenarioRepository.save(one);
         scenarioScheduleRepository.saveAll(scenarioSchedules);
 
         template.convertAndSend("/topic/scenario/"

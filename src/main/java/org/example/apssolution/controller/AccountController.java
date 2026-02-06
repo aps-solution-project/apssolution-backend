@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -138,7 +139,8 @@ public class AccountController {
         List<GetAccountDTO> accountDTOS = allAccount.stream().map(e -> GetAccountDTO.builder()
                 .accountId(e.getId()).accountName(e.getName()).accountEmail(e.getEmail())
                 .profileImageUrl(e.getProfileImageUrl()).role(e.getRole()).workedAt(e.getWorkedAt())
-                .resignedAt(e.getResignedAt()).build()).toList();
+                .resignedAt(e.getResignedAt()).build())
+                .sorted(Comparator.comparing(GetAccountDTO::getRole).thenComparing(GetAccountDTO::getWorkedAt)).toList();
 
         GetAccountAllResponse response = GetAccountAllResponse.builder()
                 .success(true).message("전체 사원 조회 완료").accounts(accountDTOS).build();

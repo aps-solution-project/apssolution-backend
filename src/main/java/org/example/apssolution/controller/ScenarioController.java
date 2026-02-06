@@ -286,7 +286,7 @@ public class ScenarioController {
     public ResponseEntity<?> getScenarioResult(@PathVariable("scenarioId") String scenarioId) {
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
-        if (!"OPTIMAL".equals(scenario.getStatus()) || scenario.getScenarioSchedules().isEmpty()) {
+        if ((!"OPTIMAL".equals(scenario.getStatus()) && !"FEASIBLE".equals(scenario.getStatus())) || scenario.getScenarioSchedules().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "시나리오 스케쥴이 준비되지 않았습니다.");
         }
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioResultResponse.from(scenario));
@@ -339,8 +339,8 @@ public class ScenarioController {
                                           @RequestBody EditScenarioRequest esr) {
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
-        if ("OPTIMAL".equals(scenario.getStatus()) || !scenario.getScenarioSchedules().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "OPTIMAL 시나리오는 변경할 수 없습니다.");
+        if (!"READY".equals(scenario.getStatus()) || !scenario.getScenarioSchedules().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "READY상태가 아닌 시나리오는 변경할 수 없습니다.");
         } else if (scenario.getPublished()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "배포된 시나리오는 변경할 수 없습니다.");
         }
@@ -580,12 +580,12 @@ public class ScenarioController {
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오를 찾을 수 없습니다."));
         if (!scenario.getStatus().equals("READY")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "시나리오를 찾을 수 없습니다.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 가동된 시나리오입니다.");
         }
 
         scenario.setStatus("PENDING");
         scenarioRepository.save(scenario);
-        longTaskService.processLongTask(account, scenario);
+        longTaskService.processLongTask(account, scenarioId);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SimulateScenarioResponse.builder()
                 .scenarioId(scenarioId)
