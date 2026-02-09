@@ -26,6 +26,7 @@ public class NoticeListResponse {
         private String content;
         private LocalDateTime createdAt;
         private int commentCount;
+        private int attachmentCount;
     }
 
     @Getter
@@ -47,7 +48,7 @@ public class NoticeListResponse {
                 .build();
     }
 
-    public static NoticeInfo from(Notice n, int commentCount){
+    public static NoticeInfo from(Notice n, int commentCount, int attachmentCount){
         return NoticeInfo.builder()
                 .id(n.getId())
                 .writer(fromAccount(n.getWriter()))
@@ -55,6 +56,7 @@ public class NoticeListResponse {
                 .content(n.getContent())
                 .createdAt(n.getCreatedAt())
                 .commentCount(commentCount)
+                .attachmentCount(attachmentCount)
                 .build();
     }
 }

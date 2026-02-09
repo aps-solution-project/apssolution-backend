@@ -14,20 +14,26 @@ import java.util.List;
 @Repository
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Query("""
-    select distinct n
-    from Notice n
-    left join n.writer w
-    left join n.scenario s
-    where n.title like %:keyword%
-       or n.content like %:keyword%
-       or w.id like %:keyword%
-       or w.name like %:keyword%
-       or s.id like %:keyword%
-       or s.title like %:keyword%
-       or s.description like %:keyword%
-    order by n.createdAt desc
+select distinct n
+from Notice n
+left join n.writer w
+left join n.scenario s
+where w.role <> org.example.apssolution.domain.enums.Role.WORKER
+  and (
+       n.title like %:keyword%
+    or n.content like %:keyword%
+    or w.id like %:keyword%
+    or w.name like %:keyword%
+    or s.id like %:keyword%
+    or s.title like %:keyword%
+    or s.description like %:keyword%
+  )
+order by n.createdAt desc
 """)
-    List<Notice> search(@Param("keyword") String keyword, Pageable pageable);
+    List<Notice> searchNoticeOnly(
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 
 
     // 제목 OR 내용 검색

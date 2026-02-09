@@ -64,7 +64,7 @@ public class SearchService {
 
 
     private List<GlobalSearchResponse.NoticeSummary> searchNotices(String keyword) {
-        return noticeRepository.search(keyword, limit)
+        return noticeRepository.searchNoticeOnly(keyword, limit)
                 .stream()
                 .map(GlobalSearchResponse.NoticeSummary::from)
                 .toList();

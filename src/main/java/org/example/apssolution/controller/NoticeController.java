@@ -21,6 +21,7 @@ import org.example.apssolution.dto.request.notice.CreateCommentRequest;
 import org.example.apssolution.dto.request.notice.CreateNoticeRequest;
 import org.example.apssolution.dto.request.notice.EditNoticeRequest;
 import org.example.apssolution.dto.response.notice.*;
+import org.example.apssolution.repository.NoticeAttachmentRepository;
 import org.example.apssolution.repository.NoticeCommentRepository;
 import org.example.apssolution.repository.NoticeRepository;
 import org.example.apssolution.service.notice.CreateNoticeService;
@@ -61,6 +62,7 @@ public class NoticeController {
     final DeleteNoticeService deleteNoticeService;
     final NoticeRepository noticeRepository;
     final NoticeCommentRepository noticeCommentRepository;
+    final NoticeAttachmentRepository noticeAttachmentRepository;
 
     @Operation(
             summary = "공지사항 등록",
@@ -127,8 +129,9 @@ public class NoticeController {
                         .notices(noticeRepository.findAll().stream()
                                 .filter(f -> f.getWriter().getRole() != Role.WORKER)
                                 .map(n -> {
-                                    int count = noticeCommentRepository.countByNoticeId(n.getId());
-                                    return NoticeListResponse.from(n, count);
+                                    int cnt = noticeCommentRepository.countByNoticeId(n.getId());
+                                    int attachmentCnt = noticeAttachmentRepository.countByNoticeId(n.getId());
+                                    return NoticeListResponse.from(n, cnt, attachmentCnt);
                                 }).sorted(Comparator.comparing(NoticeListResponse.NoticeInfo::getCreatedAt).reversed())
                                 .toList())
                         .build()
@@ -269,27 +272,41 @@ public class NoticeController {
                             """)
             )
     )
-    public ResponseEntity<List<NoticeSearchResponse>> searchNotice(@RequestParam(required = false) String keyword,
-                                                                   @RequestParam(required = false) String scenarioId) {
-        List<NoticeSearchResponse> result = searchNoticeService.search(keyword, scenarioId).stream()
-                .map(notice -> {
-                    // 본문 요약 (50자)
-                    String summary = notice.getContent();
-                    if (summary != null && summary.length() > 50) {
-                        summary = summary.substring(0, 50) + "...";
-                    }
+    public ResponseEntity<List<NoticeSearchResponse>> searchNotice(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String scenarioId
+    ) {
+        List<NoticeSearchResponse> result =
+                searchNoticeService.searchNotice(keyword, scenarioId).stream()
+                        .map(notice -> {
+                            long attachmentCnt =
+                                    noticeAttachmentRepository.countByNoticeId(notice.getId());
 
-                    return NoticeSearchResponse.builder()
-                            .noticeId(notice.getId())
-                            .title(notice.getTitle())
-                            .content(summary)
-                            .writerName(notice.getWriter().getName())
-                            .createdAt(notice.getCreatedAt())
-                            // 시나리오가 있을 때만 정보 세팅
-                            .scenarioId(notice.getScenario() != null ? notice.getScenario().getId() : null)
-                            .scenarioTitle(notice.getScenario() != null ? notice.getScenario().getTitle() : "일반 공지")
-                            .build();
-                }).toList();
+                            return NoticeSearchResponse.builder()
+                                    .noticeId(notice.getId())
+                                    .title(notice.getTitle())
+                                    .content(notice.getContent())
+                                    .writer(
+                                            NoticeSearchResponse.Writer.builder()
+                                                    .id(notice.getWriter().getId())
+                                                    .name(notice.getWriter().getName())
+                                                    .build()
+                                    )
+                                    .createdAt(notice.getCreatedAt())
+                                    .scenarioId(
+                                            notice.getScenario() != null
+                                                    ? notice.getScenario().getId()
+                                                    : null
+                                    )
+                                    .scenarioTitle(
+                                            notice.getScenario() != null
+                                                    ? notice.getScenario().getTitle()
+                                                    : "일반 공지"
+                                    )
+                                    .attachmentCount(attachmentCnt)
+                                    .build();
+                        })
+                        .toList();
 
         return ResponseEntity.ok(result);
     }
@@ -444,11 +461,11 @@ public class NoticeController {
         List<NoticeListResponse.NoticeInfo> summaries = noticeRepository.findAll().stream()
                 .filter(f -> f.getWriter().getRole() == Role.WORKER)
                 .map(notice -> {
-                    // 각 게시글의 댓글 개수 조회
-                    int commentCount = noticeCommentRepository.countByNoticeId(notice.getId());
 
-                    // 개수를 포함하여 DTO 생성 (NoticeListResponse.from 메서드에 인자 추가 필요)
-                    return NoticeListResponse.from(notice, commentCount);
+                    int commentCount = noticeCommentRepository.countByNoticeId(notice.getId());
+                    int attachmentCount = noticeAttachmentRepository.countByNoticeId(notice.getId());
+
+                    return NoticeListResponse.from(notice, commentCount, attachmentCount);
                 })
                 .toList();
 
@@ -457,10 +474,10 @@ public class NoticeController {
                         .notices(noticeRepository.findAll().stream()
                                 .filter(f -> f.getWriter().getRole() == Role.WORKER)
                                 .map(n -> {
-                                    // ✅ 각 공지사항마다 댓글 개수를 카운트
                                     int count = noticeCommentRepository.countByNoticeId(n.getId());
-                                    return NoticeListResponse.from(n, count); // ✅ 수정된 from 호출
-                                })
+                                    int attachmentCnt = noticeAttachmentRepository.countByNoticeId(n.getId());
+                                    return NoticeListResponse.from(n, count, attachmentCnt);
+                                }).sorted(Comparator.comparing(NoticeListResponse.NoticeInfo::getCreatedAt).reversed())
                                 .toList())
                         .build()
         );
@@ -535,11 +552,11 @@ public class NoticeController {
     @Operation(
             summary = "공지사항 댓글 작성",
             description = """
-                공지사항에 댓글 또는 대댓글 작성
-                
-                - commentId가 없으면 일반 댓글 생성
-                - commentId가 있으면 해당 댓글의 대댓글 생성
-                """
+                    공지사항에 댓글 또는 대댓글 작성
+                    
+                    - commentId가 없으면 일반 댓글 생성
+                    - commentId가 있으면 해당 댓글의 대댓글 생성
+                    """
     )
     @ApiResponses({
             @ApiResponse(
@@ -549,17 +566,17 @@ public class NoticeController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = NoticeCommentResponse.class),
                             examples = @ExampleObject(value = """
-                                {
-                                  "comment": {
-                                    "id": 15,
-                                    "noticeId": 3,
-                                    "writerId": "EMP001",
-                                    "content": "이 일정으로 진행하면 될 것 같습니다.",
-                                    "parentCommentId": 12,
-                                    "createdAt": "2026-01-28T18:30:00"
-                                  }
-                                }
-                                """)
+                                    {
+                                      "comment": {
+                                        "id": 15,
+                                        "noticeId": 3,
+                                        "writerId": "EMP001",
+                                        "content": "이 일정으로 진행하면 될 것 같습니다.",
+                                        "parentCommentId": 12,
+                                        "createdAt": "2026-01-28T18:30:00"
+                                      }
+                                    }
+                                    """)
                     )
             ),
             @ApiResponse(responseCode = "400", description = "요청 값 검증 실패 (내용 누락 등)"),
@@ -574,11 +591,11 @@ public class NoticeController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = CreateCommentRequest.class),
                             examples = @ExampleObject(value = """
-                                {
-                                  "content": "이 일정으로 진행하면 될 것 같습니다.",
-                                  "commentId": 12
-                                }
-                                """))
+                                    {
+                                      "content": "이 일정으로 진행하면 될 것 같습니다.",
+                                      "commentId": 12
+                                    }
+                                    """))
             )
             @RequestBody @Valid CreateCommentRequest ccr,
             BindingResult bindingResult) {
@@ -623,16 +640,15 @@ public class NoticeController {
                                            @RequestAttribute Account account) {
         NoticeComment comment = noticeCommentRepository.findById(commentId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 댓글을 찾을 수 없습니다."));
-        if(!account.getId().equals(comment.getWriter().getId())) {
+        if (!account.getId().equals(comment.getWriter().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
-        }else if(!comment.getNotice().getId().equals(noticeId)){
+        } else if (!comment.getNotice().getId().equals(noticeId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 게시물의 댓글이 아닙니다.");
         }
 
         noticeCommentRepository.delete(comment);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
-
 
 
 }

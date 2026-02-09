@@ -30,8 +30,11 @@ public class NoticeCommentResponse {
         @Schema(description = "공지사항 ID", example = "3")
         private Long noticeId;
 
-        @Schema(description = "작성자 계정 ID", example = "EMP001")
+        @Schema(description = "작성자 계정 ID", example = "P26123456")
         private String writerId;
+
+        @Schema(description = "작성자 이름", example = "홍길동")
+        private String writerName;
 
         @Schema(description = "댓글 내용", example = "작업 일정 확인했습니다.")
         private String content;
@@ -48,6 +51,7 @@ public class NoticeCommentResponse {
                 .id(comment.getId())
                 .noticeId(comment.getNotice().getId())
                 .writerId(comment.getWriter().getId())
+                .writerName(comment.getWriter().getName())
                 .content(comment.getContent())
                 .parentCommentId(comment.getParent() == null ? null : comment.getParent().getId())
                 .createdAt(comment.getCreatedAt())

@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NoticeAttachmentRepository extends JpaRepository<NoticeAttachment, Integer> {
+    int countByNoticeId(Long noticeId);
 }
