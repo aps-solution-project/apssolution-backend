@@ -357,7 +357,7 @@ public class TaskController {
                 String name = formatter.formatCellValue(row.getCell(4));
                 String description = formatter.formatCellValue(row.getCell(5));
                 int duration = Integer.parseInt(formatter.formatCellValue(row.getCell(6)));
-                Integer requiredWorkers = Integer.parseInt(formatter.formatCellValue(row.getCell(7)));
+                int requiredWorkers = Integer.parseInt(formatter.formatCellValue(row.getCell(7)));
 
                 tasks.add(Task.builder()
                         .id(taskId)
@@ -393,7 +393,6 @@ public class TaskController {
                                     .requiredWorkers(t.getRequiredWorkers())
                                     .build())
                             .toList();
-
             return ResponseEntity.ok(
                     ParseTaskXlsResponse.builder()
                             .tasks(items)

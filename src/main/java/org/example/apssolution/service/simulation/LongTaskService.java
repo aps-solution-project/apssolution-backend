@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -37,7 +38,7 @@ public class LongTaskService {
     @Transactional
     public void processLongTask(Account account, String scenarioId) {
         Scenario scenario = scenarioRepository.findById(scenarioId).get();
-        System.out.println("********** Python Calculate Start **********");
+        System.out.println("********** Python Calculate Start **********" + LocalDateTime.now());
         List<Task> myTasks = taskRepository.findAll();
         List<Tool> usingTools = toolRepository.findToolsUsedInScenario(scenario.getId());
         List<Product> myProducts = productRepository.findAll();
@@ -89,7 +90,7 @@ public class LongTaskService {
                     .build();
         }).toList();
 
-        System.out.println("********** Python Calculate Finish **********");
+        System.out.println("********** Python Calculate Finish **********" + LocalDateTime.now());
 
         if (scenario.getStatus().equals("OPTIMAL") || scenario.getStatus().equals("FEASIBLE")) {
             String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(one, result));
@@ -102,6 +103,6 @@ public class LongTaskService {
 
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
-        System.out.println("********** Long Task Service Finish **********");
+        System.out.println("********** Long Task Service Finish **********" + LocalDateTime.now());
     }
 }
