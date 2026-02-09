@@ -102,5 +102,6 @@ public class LongTaskService {
 
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
+        System.out.println("********** Long Task Service Finish **********");
     }
 }

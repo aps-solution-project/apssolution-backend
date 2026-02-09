@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
@@ -20,6 +19,7 @@ import org.example.apssolution.repository.*;
 import org.example.apssolution.service.simulation.LongTaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +39,7 @@ public class ScenarioController {
     final ScenarioRepository scenarioRepository;
     final ScenarioProductRepository scenarioProductRepository;
     final ScenarioScheduleRepository scenarioScheduleRepository;
+    final ScenarioWorkerRepository scenarioWorkerRepository;
     final ProductRepository productRepository;
     final AccountRepository accountRepository;
     final ToolRepository toolRepository;
@@ -443,6 +444,7 @@ public class ScenarioController {
             @ApiResponse(responseCode = "404", description = "시나리오 미존재"),
             @ApiResponse(responseCode = "409", description = "배포 불가 상태")
     })
+    @Transactional
     @PatchMapping("/{scenarioId}/publish") // 시나리오 배포
     public ResponseEntity<?> publishScenario(@PathVariable String scenarioId) {
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
@@ -454,6 +456,17 @@ public class ScenarioController {
         }
         scenario.setPublished(true);
         scenarioRepository.save(scenario);
+
+        List<ScenarioWorker> workers = scenario.getScenarioSchedules().stream()
+                .map(ScenarioSchedule::getWorker).distinct()
+                .map(a -> ScenarioWorker.builder()
+                        .scenario(scenario)
+                        .worker(a)
+                        .read(false)
+                        .build())
+                .toList();
+        scenarioWorkerRepository.saveAll(workers);
+
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioPublishResponse.builder()
                 .scenario(ScenarioPublishResponse.from(scenario))
                 .build());
@@ -494,6 +507,7 @@ public class ScenarioController {
         }
         scenario.setPublished(false);
         scenarioRepository.save(scenario);
+        scenarioWorkerRepository.deleteAllByScenario_Id(scenario.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioPublishResponse.builder()
                 .scenario(ScenarioPublishResponse.from(scenario))
                 .build());
