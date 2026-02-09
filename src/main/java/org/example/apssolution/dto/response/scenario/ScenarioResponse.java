@@ -14,7 +14,7 @@ import java.util.List;
 @Setter
 @Builder
 public class ScenarioResponse {
-    private ScenarioResponse.Item scenario;
+    private Item scenario;
 
     @Getter
     @Setter
