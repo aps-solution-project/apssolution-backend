@@ -137,10 +137,13 @@ public class AccountController {
     public ResponseEntity<?> getAccounts() {
         List<Account> allAccount = accountRepository.findAll();
         List<GetAccountDTO> accountDTOS = allAccount.stream().map(e -> GetAccountDTO.builder()
-                .accountId(e.getId()).accountName(e.getName()).accountEmail(e.getEmail())
-                .profileImageUrl(e.getProfileImageUrl()).role(e.getRole()).workedAt(e.getWorkedAt())
-                .resignedAt(e.getResignedAt()).build())
-                .sorted(Comparator.comparing(GetAccountDTO::getRole).thenComparing(GetAccountDTO::getWorkedAt)).toList();
+                        .accountId(e.getId()).accountName(e.getName()).accountEmail(e.getEmail())
+                        .profileImageUrl(e.getProfileImageUrl()).role(e.getRole()).workedAt(e.getWorkedAt())
+                        .resignedAt(e.getResignedAt()).build())
+                .sorted(Comparator.comparing(GetAccountDTO::getRole)
+                        .thenComparing(a -> a.getResignedAt() == null ? 0 : 1)
+                        .thenComparing(GetAccountDTO::getWorkedAt)
+                ).toList();
 
         GetAccountAllResponse response = GetAccountAllResponse.builder()
                 .success(true).message("전체 사원 조회 완료").accounts(accountDTOS).build();
