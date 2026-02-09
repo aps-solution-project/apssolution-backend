@@ -2,6 +2,7 @@ package org.example.apssolution.repository;
 
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.Notice;
+import org.example.apssolution.domain.enums.Role;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,22 +15,22 @@ import java.util.List;
 @Repository
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Query("""
-select distinct n
-from Notice n
-left join n.writer w
-left join n.scenario s
-where w.role <> org.example.apssolution.domain.enums.Role.WORKER
-  and (
-       n.title like %:keyword%
-    or n.content like %:keyword%
-    or w.id like %:keyword%
-    or w.name like %:keyword%
-    or s.id like %:keyword%
-    or s.title like %:keyword%
-    or s.description like %:keyword%
-  )
-order by n.createdAt desc
-""")
+            select distinct n
+            from Notice n
+            left join n.writer w
+            left join n.scenario s
+            where w.role <> org.example.apssolution.domain.enums.Role.WORKER
+              and (
+                   n.title like %:keyword%
+                or n.content like %:keyword%
+                or w.id like %:keyword%
+                or w.name like %:keyword%
+                or s.id like %:keyword%
+                or s.title like %:keyword%
+                or s.description like %:keyword%
+              )
+            order by n.createdAt desc
+            """)
     List<Notice> searchNoticeOnly(
             @Param("keyword") String keyword,
             Pageable pageable
@@ -44,4 +45,8 @@ order by n.createdAt desc
 
     // 작성자 기준
     List<Notice> findByWriter(Account writer);
+
+    Page<Notice> findByWriter_RoleNot(Role role, Pageable pageable);
+
+    Page<Notice> findByWriter_Role(Role role, Pageable pageable);
 }

@@ -29,6 +29,8 @@ import org.example.apssolution.service.notice.DeleteNoticeService;
 import org.example.apssolution.service.notice.EditNoticeService;
 import org.example.apssolution.service.notice.SearchNoticeService;
 import org.springframework.core.io.UrlResource;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -123,17 +125,18 @@ public class NoticeController {
                             """)
             )
     )
-    public ResponseEntity<?> getNotice() {
+    public ResponseEntity<?> getNotice(@RequestParam(defaultValue = "0") Integer page) {
+        PageRequest limit = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
         return ResponseEntity.status(HttpStatus.OK).body(
                 NoticeListResponse.builder()
-                        .notices(noticeRepository.findAll().stream()
-                                .filter(f -> f.getWriter().getRole() != Role.WORKER)
+                        .notices(noticeRepository.findByWriter_RoleNot(Role.WORKER, limit)
+                                .getContent().stream()
                                 .map(n -> {
                                     int cnt = noticeCommentRepository.countByNoticeId(n.getId());
                                     int attachmentCnt = noticeAttachmentRepository.countByNoticeId(n.getId());
                                     return NoticeListResponse.from(n, cnt, attachmentCnt);
-                                }).sorted(Comparator.comparing(NoticeListResponse.NoticeInfo::getCreatedAt).reversed())
-                                .toList())
+                                }).toList())
                         .build()
         );
     }
@@ -453,35 +456,44 @@ public class NoticeController {
                             """)
             )
     )
-    public ResponseEntity<?> getCommunities(@RequestAttribute Account account) {
+    public ResponseEntity<?> getCommunities(
+            @RequestAttribute Account account,
+            @RequestParam(defaultValue = "0") Integer page
+    ) {
         if (account.getRole() != Role.WORKER) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "잘못된 접근입니다.");
         }
 
-        List<NoticeListResponse.NoticeInfo> summaries = noticeRepository.findAll().stream()
-                .filter(f -> f.getWriter().getRole() == Role.WORKER)
-                .map(notice -> {
+        PageRequest limit = PageRequest.of(
+                page,
+                10,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
 
-                    int commentCount = noticeCommentRepository.countByNoticeId(notice.getId());
-                    int attachmentCount = noticeAttachmentRepository.countByNoticeId(notice.getId());
-
-                    return NoticeListResponse.from(notice, commentCount, attachmentCount);
-                })
-                .toList();
-
-        return ResponseEntity.status(HttpStatus.OK).body(
+        return ResponseEntity.ok(
                 NoticeListResponse.builder()
-                        .notices(noticeRepository.findAll().stream()
-                                .filter(f -> f.getWriter().getRole() == Role.WORKER)
-                                .map(n -> {
-                                    int count = noticeCommentRepository.countByNoticeId(n.getId());
-                                    int attachmentCnt = noticeAttachmentRepository.countByNoticeId(n.getId());
-                                    return NoticeListResponse.from(n, count, attachmentCnt);
-                                }).sorted(Comparator.comparing(NoticeListResponse.NoticeInfo::getCreatedAt).reversed())
-                                .toList())
+                        .notices(
+                                noticeRepository
+                                        .findByWriter_Role(Role.WORKER, limit)
+                                        .getContent() // ⭐ Page → List
+                                        .stream()
+                                        .map(n -> {
+                                            int commentCount =
+                                                    noticeCommentRepository.countByNoticeId(n.getId());
+                                            int attachmentCount =
+                                                    noticeAttachmentRepository.countByNoticeId(n.getId());
+                                            return NoticeListResponse.from(
+                                                    n,
+                                                    commentCount,
+                                                    attachmentCount
+                                            );
+                                        })
+                                        .toList()
+                        )
                         .build()
         );
     }
+
 
 
     @GetMapping("/community/{noticeId}")  // 직원 게시판 글 상세 조회
