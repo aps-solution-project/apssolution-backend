@@ -1,5 +1,11 @@
 package org.example.apssolution.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +49,37 @@ public class ChatController {
     final ChatMessageRepository chatMessageRepository;
     final SimpMessagingTemplate template;
 
-
+    @Operation(
+            summary = "그룹 채팅방 생성 또는 기존 채팅방 조회",
+            description = """
+                    그룹 채팅방 생성 처리.
+                    
+                    - 요청 멤버 조합으로 이미 존재하는 채팅방이 있으면 해당 채팅방 정보 반환
+                    - 존재하지 않으면 신규 그룹 채팅방 생성 후 반환
+                    - 요청자(Account)는 자동으로 멤버에 포함됨
+                    - 멤버 ID 조합을 기반으로 signature 생성하여 중복 방지 처리
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "신규 그룹 채팅방 생성 성공",
+                    content = @Content(schema = @Schema(implementation = ChatGroupResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "이미 존재하는 그룹 채팅방 반환",
+                    content = @Content(schema = @Schema(implementation = ChatGroupResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "요청 데이터 검증 실패"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패"
+            )
+    })
     @PostMapping// 그룹 채팅방 생성 or 그 맴버로 존재하면 해당 채팅방 정보 반환
     public ResponseEntity<?> createGroupChat(@RequestAttribute Account account,
                                              @RequestBody @Valid CreateGroupChatRequest cgr,
@@ -83,8 +119,41 @@ public class ChatController {
         return ResponseEntity.status(HttpStatus.OK).body(ChatGroupResponse.from(chat, account, chatMembers));
     }
 
+
+    @Operation(
+            summary = "1:1 채팅방 시작 또는 기존 채팅방 조회",
+            description = """
+                    1:1 채팅방 처리 API.
+                    
+                    - 요청자(Account)와 대상 사용자(targetId) 조합으로 signature 생성
+                    - 이미 존재하는 1:1 채팅방이 있으면 해당 채팅방 정보 반환
+                    - 존재하지 않으면 신규 1:1 채팅방 생성 후 반환
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "이미 존재하는 1:1 채팅방 반환",
+                    content = @Content(schema = @Schema(implementation = ChatDirectResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "신규 1:1 채팅방 생성 성공",
+                    content = @Content(schema = @Schema(implementation = ChatDirectResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "대상 사용자를 찾을 수 없음"
+            ),
+    })
     @PostMapping("/direct/{targetId}") // 1:1 채팅 시작 or 이미 해당 채팅방 있으면 정보 반환
-    public ResponseEntity<?> directChat(@PathVariable("targetId") String targetId,
+    public ResponseEntity<?> directChat(@Parameter(
+                                                description = "1:1 채팅을 시작할 대상 사용자 계정 ID",
+                                                example = "user_123",
+                                                required = true
+                                        )
+                                        @PathVariable("targetId") String targetId,
+                                        @Parameter(hidden = true)
                                         @RequestAttribute Account account) {
         String signature = String.join(":", Stream.of(targetId, account.getId()).sorted().distinct().toList());
 
@@ -117,8 +186,45 @@ public class ChatController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ChatDirectResponse.from(chat, account, target));
     }
 
-    @Transactional
-    @PostMapping("/{chatId}/message") //메시지 전송. formData로 보내야함!!!
+    @Operation(
+            summary = "채팅 메시지 전송",
+            description = """
+                    채팅방에 메시지를 전송하는 API.
+                    
+                    - multipart/form-data 방식으로 요청
+                    - TEXT 메시지 또는 FILE 메시지 전송 가능
+                    - 채팅방 참여자만 메시지 전송 가능
+                    - 파일 메시지의 경우 여러 파일 업로드 가능
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "메시지 전송 성공",
+                    content = @Content(schema = @Schema(implementation = CreateMessageResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청 (내용 없음, 타입 오류 등)"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "채팅방 참여자가 아님"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "채팅방을 찾을 수 없음"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "파일 저장 중 서버 오류"
+            )
+    })
+    @PostMapping(
+            value = "/{chatId}/message",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Transactional //메시지 전송. formData로 보내야함!!!
     public ResponseEntity<?> sendMessage(@RequestAttribute Account account,
                                          @PathVariable String chatId,
                                          @ModelAttribute CreateMessageRequest cmr) {
@@ -211,12 +317,57 @@ public class ChatController {
                 .body(CreateMessageResponse.from(message));
     }
 
+    @Operation(
+            summary = "내가 참여 중인 채팅방 목록 조회",
+            description = """
+                    로그인한 사용자가 현재 참여 중인 모든 채팅방 목록을 조회합니다.
+                    
+                    - 채팅방 멤버 기준으로 조회
+                    - 1:1 채팅방 및 그룹 채팅방 모두 포함
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "채팅방 목록 조회 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = ChatListResponse.class)
+                    )
+            ),
+    })
     @GetMapping // 내가 소속된 채팅방 리스트 가져오기
     public ResponseEntity<?> getMyChats(@RequestAttribute Account account) {
         List<Chat> myChats = chatRepository.findAllByMemberAccountId(account.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ChatListResponse.from(myChats, account));
     }
 
+    @Operation(
+            summary = "채팅방 상세 조회",
+            description = """
+                    특정 채팅방의 상세 정보를 조회합니다.
+                    
+                    - 채팅방에 참여 중인 사용자만 조회 가능
+                    - 이미 퇴장한 경우 조회 불가
+                    - 조회 시 마지막 활성 시간(lastActiveAt) 갱신
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "채팅방 상세 조회 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = ChatDetailResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "채팅방 참여 권한 없음 또는 이미 퇴장한 사용자"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "채팅방을 찾을 수 없음"
+            )
+    })
     @GetMapping("/{chatId}") // 채팅방 상세보기
     public ResponseEntity<?> getChat(@RequestAttribute Account account,
                                      @PathVariable String chatId) {
@@ -225,7 +376,7 @@ public class ChatController {
 
         ChatMember chatMember = chatMemberRepository.findByChatIdAndAccountId(chatId, account.getId()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 권한이 없습니다."));
-        if(chatMember.getLeftAt() != null){
+        if (chatMember.getLeftAt() != null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방에 권한이 없습니다.");
         }
         chatMember.setLastActiveAt(LocalDateTime.now());
@@ -233,6 +384,34 @@ public class ChatController {
         return ResponseEntity.status(HttpStatus.OK).body(ChatDetailResponse.from(chat, account, chatMember));
     }
 
+    @Operation(
+            summary = "채팅 첨부 파일 다운로드",
+            description = """
+                    채팅 메시지에 첨부된 파일을 다운로드합니다.
+                    
+                    - 서버에 저장된 채팅 첨부 파일만 다운로드 가능
+                    - 경로 조작(path traversal) 방지를 위해 루트 경로 검증 수행
+                    - 파일은 attachment 형식으로 다운로드됨
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "파일 다운로드 성공",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "잘못된 파일 경로 (허용되지 않은 경로 접근)"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "파일이 존재하지 않거나 읽을 수 없음"
+            )
+    })
     @GetMapping("/files/download")
     public ResponseEntity<?> downloadFile(@RequestParam String path) throws MalformedURLException {
 
@@ -263,6 +442,32 @@ public class ChatController {
                 .body(resource);
     }
 
+
+    @Operation(
+            summary = "채팅방 퇴장",
+            description = """
+                    채팅방에서 퇴장 처리합니다.
+                    
+                    - 채팅방 참여자만 퇴장 가능
+                    - 퇴장 시 LEAVE 타입 시스템 메시지 생성
+                    - 퇴장 시 채팅방 signature 갱신
+                    - 마지막 참여자 퇴장 시 채팅방 삭제 가능
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "채팅방 퇴장 성공"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "채팅방 참여자가 아님"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "채팅방을 찾을 수 없음"
+            )
+    })
     @Transactional
     @DeleteMapping("/{chatId}/leave")
     public ResponseEntity<?> leaveChat(@RequestAttribute Account account,
@@ -304,7 +509,25 @@ public class ChatController {
         return ResponseEntity.noContent().build();
     }
 
-
+    @Operation(
+            summary = "전체 안 읽은 메시지 수 조회",
+            description = """
+                    로그인한 사용자가 참여 중인 모든 채팅방을 기준으로
+                    안 읽은 메시지의 총 개수를 조회합니다.
+                    
+                    - 본인이 보낸 메시지는 제외
+                    - 마지막 활성 시간(lastActiveAt) 이후의 메시지만 집계
+                    """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "전체 안 읽은 메시지 수 조회 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = TotalUnreadCountResponse.class)
+                    )
+            )
+    })
     @GetMapping("/unread-count")
     public ResponseEntity<?> getUnreadMessages(@RequestAttribute Account account) {
         List<Chat> myChats = chatRepository.findAllByMemberAccountId(account.getId());
@@ -335,7 +558,6 @@ public class ChatController {
         return ResponseEntity.ok(response);
 
     }
-
 
 
 }

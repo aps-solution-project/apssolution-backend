@@ -164,6 +164,7 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+
     @GetMapping("/active")  // 재직중인 사원 조회
     @Operation(summary = "재직 사원 목록 조회", description = "퇴사자(resignedAt이 존재하는 사원)를 제외한 전체 사원 목록을 조회합니다.")
     public ResponseEntity<?> getActiveAccounts() {
