@@ -13,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,15 +28,13 @@ public class LongTaskService {
     private final ToolRepository toolRepository;
     private final ScenarioRepository scenarioRepository;
     private final ProductRepository productRepository;
-    private final ScenarioScheduleRepository scenarioScheduleRepository;
 
-    private final SimulateResultService simulateResultService;
-    final SimpMessagingTemplate template;
+    private final SimulationResultSaveService simulationResultSaveService;
+    private final SimpMessagingTemplate template;
 
     private final RestClient restClient;
 
     @Async("taskExecutor")
-    @Transactional
     public void processLongTask(Account account, String scenarioId) {
         Scenario scenario = scenarioRepository.findById(scenarioId).get();
         System.out.println("********** Python Calculate Start **********" + LocalDateTime.now());
@@ -58,48 +57,20 @@ public class LongTaskService {
             return;
         }
 
-        Scenario one = scenarioRepository.findById(scenarioId).get();
         if (result == null || result.getStatus() == null) {
-            one.setStatus("FAILED");
-            scenarioRepository.save(one);
+            scenario.setStatus("FAILED");
+            scenarioRepository.save(scenario);
             return;
         } else if (result.getSchedules() == null || result.getSchedules().isEmpty()) {
-            one.setStatus("FAILED");
-            scenarioRepository.save(one);
+            scenario.setStatus("FAILED");
+            scenarioRepository.save(scenario);
             return;
         }
-
-        one.setStatus(result.getStatus().toUpperCase());
-        one.setMakespan(result.getMakespan());
-
-        List<ScenarioSchedule> scenarioSchedules = result.getSchedules().stream().map(s -> {
-            Product product = myProducts.stream().filter(p -> p.getId().equals(s.getProductId())).findFirst().orElseThrow(() ->
-                    new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 product: " + s.getProductId()));
-            Task task = myTasks.stream().filter(t -> t.getId().equals(s.getTaskId())).findFirst().orElseThrow(() ->
-                    new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Task: " + s.getTaskId()));
-            Tool tool = usingTools.stream().filter(t -> t.getId().equals(s.getToolId())).findFirst().orElseThrow(() ->
-                    new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Tool: " + s.getToolId()));
-            return ScenarioSchedule.builder()
-                    .scenario(one)
-                    .product(product)
-                    .task(task)
-                    .worker(null)
-                    .tool(tool)
-                    .startAt(one.getStartAt().plusMinutes(s.getStart()))
-                    .endAt(one.getStartAt().plusMinutes(s.getEnd()))
-                    .build();
-        }).toList();
 
         System.out.println("********** Python Calculate Finish **********" + LocalDateTime.now());
 
-        if (scenario.getStatus().equals("OPTIMAL") || scenario.getStatus().equals("FEASIBLE")) {
-            String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(one, result));
-            scenario.setAiScheduleFeedback(feedback);
-            simulateResultService.sendResultMail(account, one);
-        }
-        scenarioScheduleRepository.deleteByScenario(one);
-        scenarioRepository.save(one);
-        scenarioScheduleRepository.saveAll(scenarioSchedules);
+        // 스케줄로 변환 -> 저장 서비스
+        simulationResultSaveService.saveScenarioResult(account, scenarioId, result, myTasks, usingTools, myProducts);
 
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
