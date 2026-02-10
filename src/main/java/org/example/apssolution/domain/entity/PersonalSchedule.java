@@ -26,4 +26,5 @@ public class PersonalSchedule {
     private String color;
     private String shift;
     private String description;
+    private boolean active;
 }
