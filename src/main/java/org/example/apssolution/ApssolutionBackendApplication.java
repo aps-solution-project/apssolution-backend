@@ -1,8 +1,12 @@
 package org.example.apssolution;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.example.apssolution.config.JWTVerifyFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -18,7 +22,6 @@ import java.util.concurrent.Executor;
 @EnableAsync
 @EnableScheduling
 public class ApssolutionBackendApplication {
-
 
     @Bean(name = "taskExecutor")
     public Executor taskExecutor() {

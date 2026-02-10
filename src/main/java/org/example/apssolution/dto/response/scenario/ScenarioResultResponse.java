@@ -45,6 +45,7 @@ public class ScenarioResultResponse {
         private ScheduleTask scheduleTask;
         private Worker worker;
         private String toolId;
+        private String categoryId;
         private LocalDateTime startAt;
         private LocalDateTime endAt;
     }
@@ -82,30 +83,31 @@ public class ScenarioResultResponse {
 
         List<ScenarioProducts> scenarioProducts = scenario.getScenarioProducts().stream().map(m ->
                 ScenarioProducts.builder()
-                .id(m.getProduct().getId())
-                .name(m.getProduct().getName())
-                .description(m.getProduct().getDescription())
-                .scenarioSchedules(scenario.getScenarioSchedules().stream().filter(s ->
-                        s.getProduct().getId().equals(m.getProduct().getId())
-                ).map(s ->
-                        ScenarioSchedules.builder()
-                        .id(s.getId())
-                        .scheduleTask(ScheduleTask.builder()
-                                .id(s.getTask().getId())
-                                .seq(s.getTask().getSeq())
-                                .name(s.getTask().getName())
-                                .description(s.getTask().getDescription())
-                                .duration(s.getTask().getDuration())
-                                .build())
-                        .worker(Worker.builder()
-                                .id(s.getWorker() == null ? null : s.getWorker().getId())
-                                .name(s.getWorker() == null ? null : s.getWorker().getName())
-                                .build())
-                        .toolId(s.getTool().getId())
-                        .startAt(s.getStartAt())
-                        .endAt(s.getEndAt())
-                        .build()).toList())
-                .build()
+                        .id(m.getProduct().getId())
+                        .name(m.getProduct().getName())
+                        .description(m.getProduct().getDescription())
+                        .scenarioSchedules(scenario.getScenarioSchedules().stream().filter(s ->
+                                s.getProduct().getId().equals(m.getProduct().getId())
+                        ).map(s ->
+                                ScenarioSchedules.builder()
+                                        .id(s.getId())
+                                        .scheduleTask(ScheduleTask.builder()
+                                                .id(s.getTask().getId())
+                                                .seq(s.getTask().getSeq())
+                                                .name(s.getTask().getName())
+                                                .description(s.getTask().getDescription())
+                                                .duration(s.getTask().getDuration())
+                                                .build())
+                                        .worker(Worker.builder()
+                                                .id(s.getWorker() == null ? null : s.getWorker().getId())
+                                                .name(s.getWorker() == null ? null : s.getWorker().getName())
+                                                .build())
+                                        .toolId(s.getTool().getId())
+                                        .categoryId(s.getTool().getCategory().getId())
+                                        .startAt(s.getStartAt())
+                                        .endAt(s.getEndAt())
+                                        .build()).toList())
+                        .build()
         ).toList();
         resp.setScenario(scenarioSolution);
         resp.setScenarioProductList(scenarioProducts);

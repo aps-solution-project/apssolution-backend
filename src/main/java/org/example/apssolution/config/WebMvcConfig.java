@@ -36,6 +36,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/notices/files/download/**",
                         "/api/chats/files/download/**",
                         "/api/chats/**",
+                        "/api/calendars/**",
                         "/ws/**"
                 );
     }

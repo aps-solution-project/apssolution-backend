@@ -15,6 +15,7 @@ public interface PersonalScheduleRepository extends JpaRepository<PersonalSchedu
                 select ps
                 from PersonalSchedule ps
                 where ps.account = :account
+                  and ps.active = true
                   and month(ps.date) = :month
                 order by ps.date asc, ps.startTime asc
             """)
