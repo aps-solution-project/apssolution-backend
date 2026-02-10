@@ -66,4 +66,5 @@ public class SimulateResultService {
 
         javaMailSender.send(mailMessage);
     }
+
 }
