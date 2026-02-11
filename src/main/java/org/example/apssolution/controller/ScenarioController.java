@@ -19,15 +19,20 @@ import org.example.apssolution.repository.*;
 import org.example.apssolution.service.simulation.LongTaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @CrossOrigin
 @RestController
@@ -36,14 +41,15 @@ import java.util.List;
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Scenario", description = "생산 시나리오 생성, 복제, 시뮬레이션 및 결과 관리 API")
 public class ScenarioController {
-    final ScenarioRepository scenarioRepository;
-    final ScenarioProductRepository scenarioProductRepository;
-    final ScenarioScheduleRepository scenarioScheduleRepository;
-    final ScenarioWorkerRepository scenarioWorkerRepository;
-    final ProductRepository productRepository;
-    final AccountRepository accountRepository;
-    final ToolRepository toolRepository;
-    final TaskRepository taskRepository;
+    private final ScenarioRepository scenarioRepository;
+    private final ScenarioProductRepository scenarioProductRepository;
+    private final ScenarioScheduleRepository scenarioScheduleRepository;
+    private final ScenarioWorkerRepository scenarioWorkerRepository;
+    private final ProductRepository productRepository;
+    private final AccountRepository accountRepository;
+    private final ToolRepository toolRepository;
+    private final PersonalScheduleRepository personalScheduleRepository;
+    private final SimpMessagingTemplate template;
 
     final LongTaskService longTaskService;
 
@@ -462,10 +468,53 @@ public class ScenarioController {
                 .map(a -> ScenarioWorker.builder()
                         .scenario(scenario)
                         .worker(a)
-                        .read(false)
+                        .isRead(false)
                         .build())
                 .toList();
         scenarioWorkerRepository.saveAll(workers);
+
+        List<PersonalSchedule> personalSchedules =
+                scenario.getScenarioSchedules().stream()
+                        .filter(ss -> ss.getWorker() != null) // worker가 null이면 제외
+                        .collect(Collectors.groupingBy(
+                                ss -> Map.entry(
+                                        ss.getWorker(),
+                                        ss.getStartAt().toLocalDate()
+                                )
+                        ))
+                        .values().stream()
+                        .map(schedules -> {
+                            ScenarioSchedule first = schedules.stream()
+                                    .min(Comparator.comparing(ScenarioSchedule::getStartAt))
+                                    .orElseThrow();
+
+                            ScenarioSchedule last = schedules.stream()
+                                    .max(Comparator.comparing(ScenarioSchedule::getEndAt))
+                                    .orElseThrow();
+
+                            LocalTime startTime = first.getStartAt().toLocalTime();
+                            LocalTime endTime = last.getEndAt().toLocalTime();
+
+                            return PersonalSchedule.builder()
+                                    .account(first.getWorker())
+                                    .title(scenario.getTitle() + " - 근무일정")
+                                    .date(first.getStartAt().toLocalDate())
+                                    .startTime(startTime)
+                                    .endTime(endTime)
+                                    .location("성남 모란 하이미디어")
+                                    .color("rose")
+                                    .shift(endTime.isBefore(LocalTime.of(18, 0)) ? "day" : "night")
+                                    .description(first.getStartAt().toLocalDate() + " - 근무일정")
+                                    .scenario(scenario)
+                                    .build();
+                        })
+                        .toList();
+
+        personalScheduleRepository.saveAll(personalSchedules);
+
+        template.convertAndSend("/topic/scenario/"
+                + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
+
 
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioPublishResponse.builder()
                 .scenario(ScenarioPublishResponse.from(scenario))
@@ -508,6 +557,7 @@ public class ScenarioController {
         scenario.setPublished(false);
         scenarioRepository.save(scenario);
         scenarioWorkerRepository.deleteAllByScenario_Id(scenario.getId());
+        personalScheduleRepository.deleteAllByScenario(scenario);
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioPublishResponse.builder()
                 .scenario(ScenarioPublishResponse.from(scenario))
                 .build());
@@ -605,5 +655,21 @@ public class ScenarioController {
                 .scenarioId(scenarioId)
                 .status("PENDING")
                 .build());
+    }
+
+
+    @GetMapping("/schedules/today")
+    public ResponseEntity<?> getTodaySchedules(@RequestAttribute Account account) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.plusDays(3).atStartOfDay();
+
+        List<ScenarioSchedule> schedules = scenarioScheduleRepository.findDailyScheduleByWorker(account, start, end);
+        if(schedules.isEmpty()){
+            return ResponseEntity.status(HttpStatus.OK).build();
+        }
+        Scenario scenario = scenarioRepository.findById(schedules.getFirst().getScenario().getId()).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "서버가 시나리오를 찾을 수 없습니다."));
+        return ResponseEntity.status(HttpStatus.OK).body(NextThreeDaysScheduleResponse.from(scenario, schedules));
     }
 }

@@ -79,6 +79,7 @@ public class ScenarioResultResponse {
                 .startAt(scenario.getStartAt())
                 .makespan(scenario.getMakespan())
                 .maxWorkerCount(scenario.getMaxWorkerCount())
+                .published(scenario.getPublished())
                 .build();
 
         List<ScenarioProducts> scenarioProducts = scenario.getScenarioProducts().stream().map(m ->

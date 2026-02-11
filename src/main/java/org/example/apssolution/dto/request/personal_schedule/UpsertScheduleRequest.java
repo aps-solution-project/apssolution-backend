@@ -54,7 +54,6 @@ public class UpsertScheduleRequest {
                 .color(this.color == null ? "blue" : this.color)
                 .shift(this.shift == null ? "day" : this.shift)
                 .description(this.description == null ? "" : this.description)
-                .active(true)
                 .build();
     }
 }
