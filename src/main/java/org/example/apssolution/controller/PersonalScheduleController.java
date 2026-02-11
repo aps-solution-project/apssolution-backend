@@ -105,4 +105,5 @@ public class PersonalScheduleController {
         personalScheduleRepository.deleteById(scheduleId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
+
 }

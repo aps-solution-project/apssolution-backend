@@ -2,6 +2,7 @@ package org.example.apssolution.repository;
 
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.PersonalSchedule;
+import org.example.apssolution.domain.entity.Scenario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,11 +16,11 @@ public interface PersonalScheduleRepository extends JpaRepository<PersonalSchedu
                 select ps
                 from PersonalSchedule ps
                 where ps.account = :account
-                  and ps.active = true
                   and month(ps.date) = :month
                 order by ps.date asc, ps.startTime asc
             """)
     List<PersonalSchedule> findMonthlySchedules(@Param("account") Account account,
                                                 @Param("month") int month);
+    void deleteAllByScenario(Scenario scenario);
 
 }

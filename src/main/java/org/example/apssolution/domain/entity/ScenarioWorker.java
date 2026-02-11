@@ -20,5 +20,5 @@ public class ScenarioWorker {
     @ManyToOne
     private Account worker;
 
-    private Boolean read;
+    private Boolean isRead;
 }
