@@ -16,7 +16,7 @@ public class FilterRegistrationConfig {
     public FilterRegistrationBean<JWTVerifyFilter> jwtFilter() {
         FilterRegistrationBean<JWTVerifyFilter> bean = new FilterRegistrationBean<>();
         bean.setFilter(new JWTVerifyFilter(objectMapper));
-        bean.addUrlPatterns("/api/calendars/**");
+        bean.addUrlPatterns("/api");
         bean.setOrder(1); // Interceptor보다 항상 먼저
         return bean;
     }

@@ -547,6 +547,7 @@ public class ScenarioController {
             @ApiResponse(responseCode = "404", description = "시나리오 미존재"),
             @ApiResponse(responseCode = "409", description = "이미 미배포 상태")
     })
+    @Transactional
     @PatchMapping("/{scenarioId}/unpublish") // 시나리오 회수
     public ResponseEntity<?> unpublishScenario(@PathVariable String scenarioId) {
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
@@ -662,7 +663,7 @@ public class ScenarioController {
     public ResponseEntity<?> getTodaySchedules(@RequestAttribute Account account) {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
-        LocalDateTime end = today.plusDays(3).atStartOfDay();
+        LocalDateTime end = today.plusDays(2).atStartOfDay();
 
         List<ScenarioSchedule> schedules = scenarioScheduleRepository.findDailyScheduleByWorker(account, start, end);
         if(schedules.isEmpty()){

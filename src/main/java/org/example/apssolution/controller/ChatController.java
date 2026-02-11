@@ -14,6 +14,7 @@ import org.example.apssolution.domain.enums.MessageType;
 import org.example.apssolution.dto.request.chat.CreateGroupChatRequest;
 import org.example.apssolution.dto.request.chat.CreateMessageRequest;
 import org.example.apssolution.dto.response.chat.*;
+import org.example.apssolution.dto.response.scenario.ScenarioSimulationResultResponse;
 import org.example.apssolution.repository.*;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -381,6 +382,8 @@ public class ChatController {
         }
         chatMember.setLastActiveAt(LocalDateTime.now());
         chatMemberRepository.save(chatMember);
+        template.convertAndSend("/topic/user/"
+                + account.getId(), ChatUnreadCountResponse.builder().msg("refresh").build());
         return ResponseEntity.status(HttpStatus.OK).body(ChatDetailResponse.from(chat, account, chatMember));
     }
 

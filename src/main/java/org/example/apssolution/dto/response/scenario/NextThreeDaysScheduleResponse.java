@@ -3,6 +3,7 @@ package org.example.apssolution.dto.response.scenario;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.example.apssolution.domain.entity.Product;
 import org.example.apssolution.domain.entity.Scenario;
 import org.example.apssolution.domain.entity.ScenarioSchedule;
 import org.example.apssolution.domain.entity.Task;
@@ -15,7 +16,7 @@ import java.util.List;
 @Builder
 public class NextThreeDaysScheduleResponse {
     ScenarioSolution scenario;
-    List<ScenarioSchedules> schedules;
+    List<ScenarioProducts> products;
 
 
     @Getter
@@ -46,20 +47,21 @@ public class NextThreeDaysScheduleResponse {
     @Getter
     @Setter
     @Builder
-    public static class ScheduleTask {
+    public static class ScenarioProducts {
         private String id;
-        private int seq;
         private String name;
         private String description;
-        private int duration;
+        private List<ScenarioSchedules> scenarioSchedules;
 
-        public static ScheduleTask from(Task task) {
-            return ScheduleTask.builder()
-                    .id(task.getId())
-                    .seq(task.getSeq())
-                    .name(task.getName())
-                    .description(task.getDescription())
-                    .duration(task.getDuration())
+        public static ScenarioProducts from(Product product, List<ScenarioSchedule> schedules) {
+            return ScenarioProducts.builder()
+                    .id(product.getId())
+                    .name(product.getName())
+                    .description(product.getDescription())
+                    .scenarioSchedules(schedules.stream()
+                            .filter(s -> s.getProduct().getId().equals(product.getId()))
+                            .map(ScenarioSchedules::from)
+                            .toList())
                     .build();
         }
     }
@@ -87,11 +89,34 @@ public class NextThreeDaysScheduleResponse {
         }
     }
 
+    @Getter
+    @Setter
+    @Builder
+    public static class ScheduleTask {
+        private String id;
+        private int seq;
+        private String name;
+        private String description;
+        private int duration;
+
+        public static ScheduleTask from(Task task) {
+            return ScheduleTask.builder()
+                    .id(task.getId())
+                    .seq(task.getSeq())
+                    .name(task.getName())
+                    .description(task.getDescription())
+                    .duration(task.getDuration())
+                    .build();
+        }
+    }
+
+
     public static NextThreeDaysScheduleResponse from(Scenario scenario, List<ScenarioSchedule> scenarioSchedules) {
         return NextThreeDaysScheduleResponse.builder()
                 .scenario(ScenarioSolution.from(scenario))
-                .schedules(scenarioSchedules.stream()
-                        .map(ScenarioSchedules::from).toList())
+                .products(scenarioSchedules.stream().map(ScenarioSchedule::getProduct)
+                        .distinct().map(p -> ScenarioProducts.from(p, scenarioSchedules))
+                        .toList())
                 .build();
     }
 }

@@ -59,6 +59,7 @@ public class ScenarioResultResponse {
         private String name;
         private String description;
         private int duration;
+        private int requiredWorkerCount;
     }
 
     @Getter
@@ -98,6 +99,7 @@ public class ScenarioResultResponse {
                                                 .name(s.getTask().getName())
                                                 .description(s.getTask().getDescription())
                                                 .duration(s.getTask().getDuration())
+                                                .requiredWorkerCount(s.getTask().getRequiredWorkers())
                                                 .build())
                                         .worker(Worker.builder()
                                                 .id(s.getWorker() == null ? null : s.getWorker().getId())
