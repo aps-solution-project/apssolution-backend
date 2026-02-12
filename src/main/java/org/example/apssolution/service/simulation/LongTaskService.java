@@ -37,7 +37,7 @@ public class LongTaskService {
     @Async("taskExecutor")
     public void processLongTask(Account account, String scenarioId) {
         Scenario scenario = scenarioRepository.findById(scenarioId).get();
-        System.out.println("********** Python Calculate Start **********" + LocalDateTime.now());
+        System.out.println("********** Python Calculate Start ********** " + LocalDateTime.now());
         List<Task> myTasks = taskRepository.findAll();
         List<Tool> usingTools = toolRepository.findToolsUsedInScenario(scenario.getId());
         List<Product> myProducts = productRepository.findAll();
@@ -51,7 +51,11 @@ public class LongTaskService {
                     .body(request)
                     .retrieve()
                     .body(SolveApiResult.class);
+            // 여기에 디버그 걸어놓고 가기
+            System.out.println("********** Python Calculate Finish ********** " + LocalDateTime.now());
         } catch (Exception e) {
+            System.out.println("********** Python Calculate Exception Catch!!! ********** " + LocalDateTime.now());
+            e.printStackTrace();
             scenario.setStatus("FAILED");
             scenarioRepository.save(scenario);
             return;
@@ -67,13 +71,13 @@ public class LongTaskService {
             return;
         }
 
-        System.out.println("********** Python Calculate Finish **********" + LocalDateTime.now());
+        System.out.println("********** ResultResponse Check Finish ********** " + LocalDateTime.now());
 
         // 스케줄로 변환 -> 저장 서비스
         simulationResultSaveService.saveScenarioResult(account, scenarioId, result, myTasks, usingTools, myProducts);
 
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
-        System.out.println("********** Long Task Service Finish **********" + LocalDateTime.now());
+        System.out.println("********** Long Task Service Finish ********** " + LocalDateTime.now());
     }
 }
