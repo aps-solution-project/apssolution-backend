@@ -515,6 +515,10 @@ public class ScenarioController {
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
 
+        workers.forEach(worker -> {
+            template.convertAndSend("/topic/publish/"
+                    + worker.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
+        });
 
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioPublishResponse.builder()
                 .scenario(ScenarioPublishResponse.from(scenario))
@@ -671,6 +675,17 @@ public class ScenarioController {
         }
         Scenario scenario = scenarioRepository.findById(schedules.getFirst().getScenario().getId()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "서버가 시나리오를 찾을 수 없습니다."));
+
+        ScenarioWorker worker = scenarioWorkerRepository.findByScenario_IdAndWorker_Id(scenario.getId(), account.getId()).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오 워커를 찾을 수 없습니다."));
+        worker.setIsRead(true);
+        scenarioWorkerRepository.save(worker);
         return ResponseEntity.status(HttpStatus.OK).body(NextThreeDaysScheduleResponse.from(scenario, schedules));
+    }
+
+    @GetMapping("/worker/unread")
+    public ResponseEntity<?> getUnreadCount(@RequestAttribute Account account) {
+        Integer unreadCount = scenarioWorkerRepository.countByWorkerAndIsReadFalse(account);
+        return ResponseEntity.status(HttpStatus.OK).body(GetUnreadWorkerCountResponse.builder().unreadCount(unreadCount).build());
     }
 }
