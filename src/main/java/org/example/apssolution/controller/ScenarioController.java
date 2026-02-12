@@ -682,4 +682,10 @@ public class ScenarioController {
         scenarioWorkerRepository.save(worker);
         return ResponseEntity.status(HttpStatus.OK).body(NextThreeDaysScheduleResponse.from(scenario, schedules));
     }
+
+    @GetMapping("/worker/unread")
+    public ResponseEntity<?> getUnreadCount(@RequestAttribute Account account) {
+        Integer unreadCount = scenarioWorkerRepository.countByWorkerAndIsReadFalse(account);
+        return ResponseEntity.status(HttpStatus.OK).body(GetUnreadWorkerCountResponse.builder().unreadCount(unreadCount).build());
+    }
 }
