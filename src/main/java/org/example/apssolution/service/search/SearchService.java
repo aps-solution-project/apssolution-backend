@@ -17,13 +17,14 @@ public class SearchService {
     private final ScenarioRepository scenarioRepository;
     private final NoticeRepository noticeRepository;
     private final ToolRepository toolRepository;
-    private final ChatMessageRepository chatMessageRepository;
+    private final AccountRepository accountRepository;
 
     private final PageRequest limit = PageRequest.of(0, 3);
 
     public GlobalSearchResponse searchAll(String keyword) {
 
         return GlobalSearchResponse.builder()
+                .accounts(searchAccount(keyword))
                 .scenarios(searchScenarios(keyword))
                 .products(searchProducts(keyword))
                 .tasks(searchTasks(keyword))
@@ -32,6 +33,12 @@ public class SearchService {
                 .build();
     }
 
+    private List<GlobalSearchResponse.AccountSummary> searchAccount(String keyword) {
+        return accountRepository.search(keyword, limit)
+                .stream()
+                .map(GlobalSearchResponse.AccountSummary::from)
+                .toList();
+    }
 
     private List<GlobalSearchResponse.ScenarioSummary> searchScenarios(String keyword) {
         return scenarioRepository.search(keyword, limit)
