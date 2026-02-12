@@ -14,7 +14,7 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class NextThreeDaysScheduleResponse {
+public class PersonalScheduleResponse {
     ScenarioSolution scenario;
     List<ScenarioProducts> products;
 
@@ -111,8 +111,8 @@ public class NextThreeDaysScheduleResponse {
     }
 
 
-    public static NextThreeDaysScheduleResponse from(Scenario scenario, List<ScenarioSchedule> scenarioSchedules) {
-        return NextThreeDaysScheduleResponse.builder()
+    public static PersonalScheduleResponse from(Scenario scenario, List<ScenarioSchedule> scenarioSchedules) {
+        return PersonalScheduleResponse.builder()
                 .scenario(ScenarioSolution.from(scenario))
                 .products(scenarioSchedules.stream().map(ScenarioSchedule::getProduct)
                         .distinct().map(p -> ScenarioProducts.from(p, scenarioSchedules))

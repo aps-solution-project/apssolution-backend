@@ -12,11 +12,30 @@ import java.util.List;
 @Setter
 @Builder
 public class GlobalSearchResponse {
+    List<AccountSummary> accounts;
     List<ScenarioSummary> scenarios;
     List<ProductSummary> products;
     List<TaskSummary> tasks;
     List<ToolSummary> tools;
     List<NoticeSummary> notices;
+
+    @Getter
+    @Builder
+    public static class AccountSummary{
+        private String id;
+        private String name;
+        private String email;
+        private String profileImageUrl;
+
+        public static AccountSummary from(Account account){
+            return AccountSummary.builder()
+                    .id(account.getId())
+                    .name(account.getName())
+                    .email(account.getEmail())
+                    .profileImageUrl(account.getProfileImageUrl())
+                    .build();
+        }
+    }
 
     @Getter
     @Builder

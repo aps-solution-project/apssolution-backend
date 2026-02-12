@@ -13,7 +13,6 @@ import org.example.apssolution.domain.entity.*;
 import org.example.apssolution.dto.request.scenario.CreateScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioScheduleRequest;
-import org.example.apssolution.dto.request.scenario.SolveScenarioRequest;
 import org.example.apssolution.dto.response.scenario.*;
 import org.example.apssolution.repository.*;
 import org.example.apssolution.service.simulation.LongTaskService;
@@ -32,6 +31,7 @@ import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @CrossOrigin
@@ -464,7 +464,8 @@ public class ScenarioController {
         scenarioRepository.save(scenario);
 
         List<ScenarioWorker> workers = scenario.getScenarioSchedules().stream()
-                .map(ScenarioSchedule::getWorker).distinct()
+                .map(ScenarioSchedule::getWorker)
+                .filter(Objects::nonNull).distinct()
                 .map(a -> ScenarioWorker.builder()
                         .scenario(scenario)
                         .worker(a)
@@ -515,10 +516,13 @@ public class ScenarioController {
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
 
-        workers.forEach(worker -> {
-            template.convertAndSend("/topic/publish/"
-                    + worker.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());
-        });
+        workers.stream().map(ScenarioWorker::getWorker)
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(worker -> {
+                    template.convertAndSend("/topic/user/"
+                            + worker.getId(), ScenarioSimulationResultResponse.builder().message("publishRefresh").build());
+                });
 
         return ResponseEntity.status(HttpStatus.OK).body(ScenarioPublishResponse.builder()
                 .scenario(ScenarioPublishResponse.from(scenario))
@@ -615,7 +619,9 @@ public class ScenarioController {
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오 스케쥴을 찾을 수 없습니다."));
         Account worker = accountRepository.findById(esr.getWorkerId()).orElse(null);
         Tool tool = toolRepository.findById(esr.getToolId()).orElse(null);
-        scenarioSchedule.setWorker(worker);
+        if(scenarioSchedule.getTask().getRequiredWorkers() > 0){
+            scenarioSchedule.setWorker(worker);
+        }
         scenarioSchedule.setTool(tool);
         scenarioScheduleRepository.save(scenarioSchedule);
         return ResponseEntity.status(HttpStatus.OK)
@@ -670,17 +676,20 @@ public class ScenarioController {
         LocalDateTime end = today.plusDays(2).atStartOfDay();
 
         List<ScenarioSchedule> schedules = scenarioScheduleRepository.findDailyScheduleByWorker(account, start, end);
-        if(schedules.isEmpty()){
+        if (schedules.isEmpty()) {
             return ResponseEntity.status(HttpStatus.OK).build();
+        }else{
+            Scenario scenario = scenarioRepository.findById(schedules.getFirst().getScenario().getId()).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "서버가 시나리오를 찾을 수 없습니다."));
+            List<ScenarioSchedule> targetSchedules = schedules.stream()
+                    .filter(s -> s.getScenario().getId().equals(scenario.getId()))
+                    .toList();
+            if(targetSchedules.isEmpty()){
+                return ResponseEntity.status(HttpStatus.OK).build();
+            }else{
+                return ResponseEntity.status(HttpStatus.OK).body(PersonalScheduleResponse.from(scenario, schedules));
+            }
         }
-        Scenario scenario = scenarioRepository.findById(schedules.getFirst().getScenario().getId()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "서버가 시나리오를 찾을 수 없습니다."));
-
-        ScenarioWorker worker = scenarioWorkerRepository.findByScenario_IdAndWorker_Id(scenario.getId(), account.getId()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오 워커를 찾을 수 없습니다."));
-        worker.setIsRead(true);
-        scenarioWorkerRepository.save(worker);
-        return ResponseEntity.status(HttpStatus.OK).body(NextThreeDaysScheduleResponse.from(scenario, schedules));
     }
 
     @GetMapping("/worker/unread")

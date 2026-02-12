@@ -32,11 +32,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/accounts/*/edit",
                         "/api/accounts/*/pw",
                         "/api/accounts",
+                        "/api/tools",
                         "/api/notices/**",
                         "/api/notices/files/download/**",
                         "/api/chats/files/download/**",
                         "/api/chats/**",
                         "/api/scenarios/schedules/today",
+                        "/api/scenarios/worker/unread",
                         "/api/calendars/**",
                         "/ws/**"
                 );

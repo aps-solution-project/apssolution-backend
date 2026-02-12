@@ -14,4 +14,5 @@ public interface ScenarioWorkerRepository extends JpaRepository<ScenarioWorker, 
     void deleteAllByScenario_Id(String scenarioId);
     Optional<ScenarioWorker> findByScenario_IdAndWorker_Id(String scenarioId, String workerId);
     Integer countByWorkerAndIsReadFalse(Account worker);
+    List<ScenarioWorker> findByWorker_Id(String workerId);
 }

@@ -9,10 +9,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.Account;
 import org.example.apssolution.domain.entity.PersonalSchedule;
+import org.example.apssolution.domain.entity.ScenarioWorker;
 import org.example.apssolution.dto.request.personal_schedule.UpsertScheduleRequest;
 import org.example.apssolution.dto.response.personal_schedule.UpsertScheduleResponse;
 import org.example.apssolution.dto.response.personal_schedule.GetMonthlySchedulesResponse;
 import org.example.apssolution.repository.PersonalScheduleRepository;
+import org.example.apssolution.repository.ScenarioWorkerRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +29,7 @@ import java.util.List;
 @RequestMapping("/api/calendars")
 public class PersonalScheduleController {
     private final PersonalScheduleRepository personalScheduleRepository;
-
+    private final ScenarioWorkerRepository scenarioWorkerRepository;
 
     @Operation(
             summary = "개인 일정 생성/수정",
@@ -55,14 +57,14 @@ public class PersonalScheduleController {
         PersonalSchedule personalSchedule = null;
         if (csr.getId() == null) {
             personalSchedule = csr.toPersonalSchedule(account);
-        }else{
+        } else {
             personalSchedule = personalScheduleRepository.findById(csr.getId()).orElseThrow(() ->
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "알 수 없는 스케줄 아이디 입니다."));
             personalSchedule.setTitle(csr.getTitle() == null ? personalSchedule.getTitle() : csr.getTitle());
             personalSchedule.setDate(csr.getDate() == null ? personalSchedule.getDate() : csr.getDate());
             personalSchedule.setStartTime(csr.getStartTime() == null ? personalSchedule.getStartTime() : csr.getStartTime());
             personalSchedule.setEndTime(csr.getEndTime() == null ? personalSchedule.getEndTime() : csr.getEndTime());
-            personalSchedule.setLocation(csr.getLocation() == null ?  personalSchedule.getLocation() : csr.getLocation());
+            personalSchedule.setLocation(csr.getLocation() == null ? personalSchedule.getLocation() : csr.getLocation());
             personalSchedule.setColor(csr.getColor() == null ? personalSchedule.getColor() : csr.getColor());
             personalSchedule.setShift(csr.getShift() == null ? personalSchedule.getShift() : csr.getShift());
             personalSchedule.setDescription(csr.getDescription() == null ? personalSchedule.getDescription() : csr.getDescription());
@@ -90,6 +92,12 @@ public class PersonalScheduleController {
             month = LocalDate.now().getMonthValue();
         }
         List<PersonalSchedule> personalSchedules = personalScheduleRepository.findMonthlySchedules(account, month);
+        List<ScenarioWorker> workers = scenarioWorkerRepository.findByWorker_Id(account.getId());
+
+        workers.forEach(w -> {
+            w.setIsRead(true);
+        });
+        scenarioWorkerRepository.saveAll(workers);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(GetMonthlySchedulesResponse.fromPersonalSchedules(personalSchedules));

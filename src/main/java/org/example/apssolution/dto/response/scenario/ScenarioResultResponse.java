@@ -25,6 +25,7 @@ public class ScenarioResultResponse {
         private Integer makespan;
         private Integer maxWorkerCount;
         private Boolean published;
+        private String aiScheduleFeedback;
     }
 
     @Getter
@@ -81,6 +82,7 @@ public class ScenarioResultResponse {
                 .makespan(scenario.getMakespan())
                 .maxWorkerCount(scenario.getMaxWorkerCount())
                 .published(scenario.getPublished())
+                .aiScheduleFeedback(scenario.getAiScheduleFeedback())
                 .build();
 
         List<ScenarioProducts> scenarioProducts = scenario.getScenarioProducts().stream().map(m ->

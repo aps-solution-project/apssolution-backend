@@ -1,11 +1,13 @@
 package org.example.apssolution.repository;
 
 import org.example.apssolution.domain.entity.Account;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,5 +23,15 @@ public interface AccountRepository extends JpaRepository<Account, String> {
           and a.resignedAt < :threshold
     """)
     int deleteResignedAccountsBefore(@Param("threshold") LocalDateTime threshold);
+    @Query("""
+    select distinct a
+    from Account a
+    where a.id like %:keyword%
+       or a.name like %:keyword%
+       or a.email like %:keyword%
+       or cast(a.role as string) like %:keyword%
+    order by a.workedAt desc
+""")
+    List<Account> search(@Param("keyword") String keyword, Pageable pageable);
 
 }
