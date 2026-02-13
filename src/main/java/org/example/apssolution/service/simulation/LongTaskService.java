@@ -43,15 +43,26 @@ public class LongTaskService {
         List<Task> myTasks = taskRepository.findAll();
         List<Tool> usingTools = toolRepository.findToolsUsedInScenario(scenario.getId());
         List<Product> myProducts = productRepository.findAll();
-        int n = Math.floorDiv(scenario.getMaxWorkerCount(), 2);
+        int maxCount = scenario.getMaxWorkerCount();
 
-        List<Account> copied = new ArrayList<>(accounts);
-        Collections.shuffle(copied);
+        List<Account> shuffled = new ArrayList<>(accounts);
+        Collections.shuffle(shuffled);
 
-        List<Account> resultAccount = copied.stream().limit(n).toList();
+        int pickCount = Math.min(maxCount, shuffled.size());
+
+        List<Account> pickedWorkers = shuffled.subList(0, pickCount);
+
+        int dayCount = (pickCount + 1) / 2;
+        int nightCount = pickCount / 2;
+
+        List<Account> dayWorkers =
+                new ArrayList<>(pickedWorkers.subList(0, dayCount));
+
+        List<Account> nightWorkers =
+                new ArrayList<>(pickedWorkers.subList(dayCount, dayCount + nightCount));
 
 
-        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, usingTools, resultAccount);
+        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, usingTools, dayWorkers, nightWorkers);
 
         SolveApiResult result;
         try {
@@ -83,7 +94,7 @@ public class LongTaskService {
         System.out.println("********** ResultResponse Check Finish ********** " + LocalDateTime.now());
 
         // 스케줄로 변환 -> 저장 서비스
-        simulationResultSaveService.saveScenarioResult(account, scenarioId, result, myTasks, usingTools, myProducts, resultAccount);
+        simulationResultSaveService.saveScenarioResult(account, scenarioId, result, myTasks, usingTools, myProducts, pickedWorkers);
 
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());

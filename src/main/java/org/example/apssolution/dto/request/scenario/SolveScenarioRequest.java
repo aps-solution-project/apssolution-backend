@@ -14,7 +14,8 @@ public class SolveScenarioRequest {
     ScenarioSolution scenario;
     List<ScenarioProducts> scenarioProductList;
     List<Tool> tools;
-    List<AccountInfo> accounts;
+    List<AccountInfo> dayWorkers;
+    List<AccountInfo> nightWorkers;
 
     @Getter
     @Setter
@@ -69,7 +70,7 @@ public class SolveScenarioRequest {
         private Integer requiredWorkers;
     }
 
-    public static SolveScenarioRequest from(Scenario scenario, List<Task> myTasks, List<Tool> tools, List<Account> accounts) {
+    public static SolveScenarioRequest from(Scenario scenario, List<Task> myTasks, List<Tool> tools, List<Account> dayWorker, List<Account> nightWorker) {
         SolveScenarioRequest resp = new SolveScenarioRequest();
 
         ScenarioSolution scenarioSolution = ScenarioSolution.builder()
@@ -104,12 +105,14 @@ public class SolveScenarioRequest {
                         .build()
         ).toList();
 
-        List<AccountInfo> accountInfos = accounts.stream().map(AccountInfo::from).toList();
+        List<AccountInfo> day = dayWorker.stream().map(AccountInfo::from).toList();
+        List<AccountInfo> night = nightWorker.stream().map(AccountInfo::from).toList();
 
         resp.setScenario(scenarioSolution);
         resp.setScenarioProductList(scenarioProducts);
         resp.setTools(tools);
-        resp.setAccounts(accountInfos);
+        resp.setDayWorkers(day);
+        resp.setNightWorkers(night);
         return resp;
     }
 }
