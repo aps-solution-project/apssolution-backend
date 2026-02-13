@@ -56,7 +56,7 @@ public class LongTaskService {
         SolveApiResult result;
         try {
             result = restClient.post()
-                    .uri("http://192.168.0.20:5000/api/solve")
+                    .uri("http://127.0.0.1:5000/api/solve")
                     .body(request)
                     .retrieve()
                     .body(SolveApiResult.class);
