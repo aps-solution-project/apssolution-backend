@@ -500,12 +500,15 @@ public class ChatController {
 
         // 🔔 나가기 소켓 알림
         template.convertAndSend("/topic/chat/" + chatId, ChatMessageResponse.from(message));
-//        chat.getChatMembers().forEach(member -> {
-//            template.convertAndSend("/topic/user/" + member.getAccount().getId(), "refresh");
-//        });
+        chat.getChatMembers().forEach(member -> {
+            template.convertAndSend(
+                    "/topic/user/" + member.getAccount().getId(),
+                    Map.of("msg", "refresh") // String이 아닌 Map(JSON)으로 전송
+            );
+        });
 
-        // 🔥 채팅방에 아무도 안 남으면 방 삭제 여부 선택 가능
-        if (chatMemberRepository.countByChat_IdAndLeftAtIsNull(chatId) <= 1) {
+        // 🔥 채팅방에 아무도 안 남으면 삭제 (0으로 체크하는 것이 더 정확합니다)
+        if (chatMemberRepository.countByChat_IdAndLeftAtIsNull(chatId) == 0) {
             chatRepository.delete(chat);
         }
 
