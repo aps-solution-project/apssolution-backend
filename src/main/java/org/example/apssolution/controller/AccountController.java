@@ -140,10 +140,10 @@ public class AccountController {
                         .accountId(e.getId()).accountName(e.getName()).accountEmail(e.getEmail())
                         .profileImageUrl(e.getProfileImageUrl()).role(e.getRole()).workedAt(e.getWorkedAt())
                         .resignedAt(e.getResignedAt()).build())
-                .sorted(Comparator.comparing(GetAccountDTO::getRole)
-                        .thenComparing(a -> a.getResignedAt() == null ? 0 : 1)
-                        .thenComparing(GetAccountDTO::getWorkedAt)
-                ).toList();
+                .sorted(Comparator.comparing((GetAccountDTO a) -> a.getResignedAt() == null ? 0 : 1)
+                        .thenComparing(GetAccountDTO::getRole)
+                        .thenComparing(GetAccountDTO::getWorkedAt))
+                .toList();
 
         GetAccountAllResponse response = GetAccountAllResponse.builder()
                 .success(true).message("전체 사원 조회 완료").accounts(accountDTOS).build();
