@@ -194,6 +194,8 @@ public class TaskController {
                         .duration(t.getDuration())
                         .requiredWorkers(t.getRequiredWorkers())
                         .build())
+                .sorted(Comparator.comparing(TaskListResponse.TaskItem::getProductId)
+                        .thenComparing(TaskListResponse.TaskItem::getSeq))
                 .toList();
 
         return ResponseEntity.ok(TaskListResponse.builder().tasks(taskItems).build());
