@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.apssolution.domain.entity.*;
+import org.example.apssolution.domain.enums.Role;
 import org.example.apssolution.dto.request.scenario.CreateScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioRequest;
 import org.example.apssolution.dto.request.scenario.EditScenarioScheduleRequest;
@@ -667,9 +668,11 @@ public class ScenarioController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 가동된 시나리오입니다.");
         }
 
+        List<Account> accounts = accountRepository.findByRoleAndResignedAtIsNull(Role.WORKER);
+
         scenario.setStatus("PENDING");
         scenarioRepository.save(scenario);
-        longTaskService.processLongTask(account, scenarioId);
+        longTaskService.processLongTask(account, scenarioId, accounts);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SimulateScenarioResponse.builder()
                 .scenarioId(scenarioId)

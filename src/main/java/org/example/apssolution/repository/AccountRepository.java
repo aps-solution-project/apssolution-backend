@@ -1,6 +1,7 @@
 package org.example.apssolution.repository;
 
 import org.example.apssolution.domain.entity.Account;
+import org.example.apssolution.domain.enums.Role;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -33,5 +34,6 @@ public interface AccountRepository extends JpaRepository<Account, String> {
     order by a.workedAt desc
 """)
     List<Account> search(@Param("keyword") String keyword, Pageable pageable);
+    List<Account> findByRoleAndResignedAtIsNull(Role role);
 
 }

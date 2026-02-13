@@ -18,6 +18,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -35,14 +37,21 @@ public class LongTaskService {
     private final RestClient restClient;
 
     @Async("taskExecutor")
-    public void processLongTask(Account account, String scenarioId) {
+    public void processLongTask(Account account, String scenarioId, List<Account> accounts) {
         Scenario scenario = scenarioRepository.findById(scenarioId).get();
         System.out.println("********** Python Calculate Start ********** " + LocalDateTime.now());
         List<Task> myTasks = taskRepository.findAll();
         List<Tool> usingTools = toolRepository.findToolsUsedInScenario(scenario.getId());
         List<Product> myProducts = productRepository.findAll();
+        int n = Math.floorDiv(scenario.getMaxWorkerCount(), 2);
 
-        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, usingTools);
+        List<Account> copied = new ArrayList<>(accounts);
+        Collections.shuffle(copied);
+
+        List<Account> resultAccount = copied.stream().limit(n).toList();
+
+
+        SolveScenarioRequest request = SolveScenarioRequest.from(scenario, myTasks, usingTools, resultAccount);
 
         SolveApiResult result;
         try {
@@ -74,7 +83,7 @@ public class LongTaskService {
         System.out.println("********** ResultResponse Check Finish ********** " + LocalDateTime.now());
 
         // 스케줄로 변환 -> 저장 서비스
-        simulationResultSaveService.saveScenarioResult(account, scenarioId, result, myTasks, usingTools, myProducts);
+        simulationResultSaveService.saveScenarioResult(account, scenarioId, result, myTasks, usingTools, myProducts, resultAccount);
 
         template.convertAndSend("/topic/scenario/"
                 + scenario.getId(), ScenarioSimulationResultResponse.builder().message("refresh").build());

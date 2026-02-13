@@ -25,6 +25,7 @@ public class SolveApiResult {
     @Setter
     @Builder
     public static class Schedule {
+        private String accountId;
         private Integer duration;
         private Integer start;
         private Integer end;

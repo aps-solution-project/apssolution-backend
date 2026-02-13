@@ -14,6 +14,22 @@ public class SolveScenarioRequest {
     ScenarioSolution scenario;
     List<ScenarioProducts> scenarioProductList;
     List<Tool> tools;
+    List<AccountInfo> accounts;
+
+    @Getter
+    @Setter
+    @Builder
+    public static class AccountInfo{
+        private String id;
+        private String name;
+
+        public static AccountInfo from(Account account){
+            return AccountInfo.builder()
+                    .id(account.getId())
+                    .name(account.getName())
+                    .build();
+        }
+    }
 
     @Getter
     @Setter
@@ -53,7 +69,7 @@ public class SolveScenarioRequest {
         private Integer requiredWorkers;
     }
 
-    public static SolveScenarioRequest from(Scenario scenario, List<Task> myTasks, List<Tool> tools) {
+    public static SolveScenarioRequest from(Scenario scenario, List<Task> myTasks, List<Tool> tools, List<Account> accounts) {
         SolveScenarioRequest resp = new SolveScenarioRequest();
 
         ScenarioSolution scenarioSolution = ScenarioSolution.builder()
@@ -88,9 +104,12 @@ public class SolveScenarioRequest {
                         .build()
         ).toList();
 
+        List<AccountInfo> accountInfos = accounts.stream().map(AccountInfo::from).toList();
+
         resp.setScenario(scenarioSolution);
         resp.setScenarioProductList(scenarioProducts);
         resp.setTools(tools);
+        resp.setAccounts(accountInfos);
         return resp;
     }
 }
