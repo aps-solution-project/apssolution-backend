@@ -26,7 +26,8 @@ public class SimulationResultSaveService {
                                    SolveApiResult result,
                                    List<Task> myTasks,
                                    List<Tool> usingTools,
-                                   List<Product> myProducts) {
+                                   List<Product> myProducts,
+                                   List<Account> accounts) {
         Scenario scenario = scenarioRepository.findById(scenarioId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.CONFLICT, "UNKNOWN SERVER ERROR"));
 
@@ -41,11 +42,12 @@ public class SimulationResultSaveService {
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Task: " + s.getTaskId()));
             Tool tool = usingTools.stream().filter(t -> t.getId().equals(s.getToolId())).findFirst().orElseThrow(() ->
                     new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 Tool: " + s.getToolId()));
+            Account worker = accounts.stream().filter(a -> a.getId().equals(s.getAccountId())).findFirst().orElse(null);
             return ScenarioSchedule.builder()
                     .scenario(scenario)
                     .product(product)
                     .task(task)
-                    .worker(null)
+                    .worker(worker)
                     .tool(tool)
                     .startAt(scenario.getStartAt().plusMinutes(s.getStart()))
                     .endAt(scenario.getStartAt().plusMinutes(s.getEnd()))
@@ -56,7 +58,7 @@ public class SimulationResultSaveService {
             String feedback = simulateResultService.getSchedulesFeedback(ScenarioAiFeedbackRequest.from(scenario, result));
             scenario.setAiScheduleFeedback(feedback);
             simulateResultService.sendResultMail(account, scenario);
-        }else{
+        } else {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "UNKNOWN SERVER ERROR");
         }
 
