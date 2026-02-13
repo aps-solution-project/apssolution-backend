@@ -617,13 +617,22 @@ public class ScenarioController {
                                                   @RequestBody EditScenarioScheduleRequest esr) {
         ScenarioSchedule scenarioSchedule = scenarioScheduleRepository.findById(scenarioSchedulesId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "시나리오 스케쥴을 찾을 수 없습니다."));
-        Account worker = accountRepository.findById(esr.getWorkerId()).orElse(null);
+        Account worker = null;
+        if(esr.getWorkerId() != null){
+            worker = accountRepository.findById(esr.getWorkerId()).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "직원 정보를 찾을 수 없습니다."));
+        }
+
         Tool tool = toolRepository.findById(esr.getToolId()).orElse(null);
-        if(scenarioSchedule.getTask().getRequiredWorkers() > 0){
+        if(scenarioSchedule.getTask().getRequiredWorkers() > 0 && worker != null){
             scenarioSchedule.setWorker(worker);
         }
         scenarioSchedule.setTool(tool);
         scenarioScheduleRepository.save(scenarioSchedule);
+
+        template.convertAndSend("/topic/scenario/"
+                + scenarioSchedule.getScenario().getId(), ScenarioSimulationResultResponse.builder().message("scheduleRefresh").build());
+
         return ResponseEntity.status(HttpStatus.OK)
                 .body(EditScenarioScheduleResponse.builder()
                         .scenarioSchedule(EditScenarioScheduleResponse.from(scenarioSchedule))
