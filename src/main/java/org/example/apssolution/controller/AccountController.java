@@ -120,7 +120,7 @@ public class AccountController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, result.getMessage());
         }
 
-        return ResponseEntity.ok("사원 정보 수정 완료");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @GetMapping // 전체 사원 조회
@@ -218,7 +218,6 @@ public class AccountController {
                         .message("Account Edit Complete")
                         .build());
     }
-
     @PatchMapping("/{accountId}/password")    // 비밀번호 변경
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "사원용 비밀번호 변경", description = "로그인한 사원이 본인 비밀번호 변경. 본인 계정이 아닌 경우 접근 불가.")
@@ -236,14 +235,13 @@ public class AccountController {
         }
 
         ServiceResultResponse result = editAccountPasswordService.editPw(account, request);
-        if (!result.isSuccess()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    result.getMessage()
-            );
-        }
-
-        return ResponseEntity.ok("비밀번호 변경 완료");
+//        if (!result.isSuccess()) {
+//            throw new ResponseStatusException(
+//                    HttpStatus.BAD_REQUEST,
+//                    result.getMessage()
+//            );
+//        }
+        return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @DeleteMapping("/{accountId}/resign") // 사원 퇴직 처리
