@@ -406,6 +406,7 @@ public class ScenarioController {
                 .description(scenario.getDescription())
                 .startAt(scenario.getStartAt())
                 .maxWorkerCount(scenario.getMaxWorkerCount())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         scenarioRepository.save(cloneScenario);
