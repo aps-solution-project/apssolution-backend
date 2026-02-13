@@ -42,7 +42,7 @@ public class ApssolutionBackendApplication {
                 .build();
 
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
-        factory.setReadTimeout(Duration.ofSeconds(43200));  // 읽기 타임아웃
+        factory.setReadTimeout(Duration.ofSeconds(44000));  // 읽기 타임아웃
 
         return RestClient.builder()
                 .requestFactory(factory)
